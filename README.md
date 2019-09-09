@@ -1,8 +1,9 @@
 
-# Python Project Initializer
-This repository is a config repo for initialising other repos. It helps the developer get started with writing 
-features rather than doing configs at the beginning.
-The Project comes with pre-commit hooks and test coverage setup already installed
+# Utitlity Manager
+This repo does nothing for now. Please dont check again later
+
+
+## The following texts is to be refactored when I feel like
 
 ### Features
 * has testing already installed
@@ -16,9 +17,9 @@ Run the following commands:
 - Install `pipenv` via `pip install pipenv`
 - Start virtual environment via `pipenv shell`
 - Install dependencies via `pipenv install`
-- Make bash scripts executable via: `chmod +x hooks/install_hooks.sh hooks/pre_commit.sh`
+- Make bash scripts executable via: `chmod +x hooks/install_hooks.sh hooks/pre_commit.sh scripts/install_commit_template.sh`
 - Install hooks by running: `hooks/install_hooks.sh`
-
+- Install commit template via: `scripts/install_commit_template.sh`
 
 > Below is a sample README format which you could just edit
 # Sample Project Name

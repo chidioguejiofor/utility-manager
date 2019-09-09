@@ -1,6 +1,7 @@
 from settings import db
+from .base import BaseModel
 
 
-class User(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
+class User(BaseModel):
+    __tablename__ = "User"
     name = db.Column(db.String(128))

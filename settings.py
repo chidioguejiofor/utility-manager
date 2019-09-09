@@ -1,6 +1,8 @@
 from flask import Flask
 from flask_restplus import Api
+from sqlalchemy import event
 from flask_marshmallow import Marshmallow
+from api.utils.time_util import TimeUtil
 import os
 from flask import Blueprint
 from flask_sqlalchemy import SQLAlchemy
@@ -49,6 +51,18 @@ env_mapper = {
 }
 
 
+def add_id_event_to_models(tables_in_my_app):
+    # The table retrival code was gotten from stack-overflow in
+    # https://stackoverflow.com/questions/26514823/get-all-models-from-flask-sqlalchemy-db
+    from api.models.base.id_generator import IDGenerator
+
+    for table in tables_in_my_app:
+        event.listen(table, 'before_insert',
+                     IDGenerator.generate_id_before_insert)
+        event.listen(table, 'before_update',
+                     TimeUtil.generate_time_before_update)
+
+
 def create_app(current_env=os.getenv('ENVIRONMENT', 'production')):
     app = Flask(__name__)
     app.config.from_object(env_mapper[current_env])
@@ -62,4 +76,10 @@ def create_app(current_env=os.getenv('ENVIRONMENT', 'production')):
     app.register_blueprint(api_blueprint)
     import api.views
     import api.models
+    tables_in_my_app = [
+        cls for cls in db.Model._decl_class_registry.values()
+        if isinstance(cls, type) and issubclass(cls, db.Model)
+    ]
+    add_id_event_to_models(tables_in_my_app)
+
     return app

@@ -11,7 +11,17 @@ celery = "*"
 redis = "*"
 sendgrid = "*"
 cloudinary = "*"
-
+flask-restplus = "*"
+flask = "*"
+flask-marshmallow = "*"
+flask-sqlalchemy = "*"
+pytest-flask = "*"
+flask-cors = "*"
+flask-migrate = "*"
+"psycopg2" = "*"
+"psycopg2-binary" = "*"
+marshmallow-sqlalchemy = "*"
+pytest = "*"
 
 [dev-packages]
 yapf = "*"

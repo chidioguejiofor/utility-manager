@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
 echo "<<< API is now trying to connect to the database >>> "
-echo "<<< Making migrations >>> "
-python manage.py makemigrations
 echo "<<< Migrating Database >>> "
-python manage.py migrate # migrate db
+flask db migrate # migrate db
 
 sleep 2
 echo "<<< Starting celery_config worker >>> "

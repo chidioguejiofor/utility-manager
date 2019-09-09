@@ -5,9 +5,8 @@ sleep 30 # waiting for the postgres db and redis to start up first
 
 echo "<<< API is now trying to connect to the database >>> "
 echo "<<< Making migrations >>> "
-python manage.py makemigrations
 echo "<<< Migrating Database >>> "
-python manage.py migrate # migrate db
+flask db migrate # migrate db
 
 sleep 6
 echo "<<< Starting celery_config worker >>> "

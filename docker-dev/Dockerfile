@@ -6,18 +6,18 @@ MAINTAINER Prof<chidioguejiofor@gmail.com>
 # Install pipenv using pip
 RUN pip install pipenv
 
-# Make /airtech-api the working directory
-WORKDIR /airtech-api
+# Make /api the working directory
+WORKDIR /api-data
 
 # Copy ./Pipfile and ./Pipfile.lock to the working directory
-COPY ./Pipfile /airtech-api
-COPY ./Pipfile.lock /airtech-api
+COPY ./Pipfile /api-data
+COPY ./Pipfile.lock /api-data
 
 # Install dependencies in the Pipfile
 RUN  pipenv install --system  --deploy --ignore-pipfile
 
-# Copy all the other files/folders to airtech-api
-COPY . /airtech-api
+# Copy all the other files/folders to api
+COPY . /api-data
 
 # Make the scripts/entrypoint.sh bash script
 ADD  docker-dev/entrypoint.sh /usr/local/bin/entrypoint.sh

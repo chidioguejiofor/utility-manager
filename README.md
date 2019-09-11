@@ -1,38 +1,21 @@
 
-# Utitlity Manager
-This repo does nothing for now. Please dont check again later
-
-
-## The following texts is to be refactored when I feel like
-
-### Features
-* has testing already installed
-* has config for .circleci
-* has pre-commit hooks that ensure that your python files follow the PEP8 style guide
-
-### How to use this
-Run the following commands:
-
-- Clone repo via git clone `https://github.com/chidioguejiofor/InitialisePythonProject.git`
-- Install `pipenv` via `pip install pipenv`
-- Start virtual environment via `pipenv shell`
-- Install dependencies via `pipenv install`
-- Make bash scripts executable via: `chmod +x hooks/install_hooks.sh hooks/pre_commit.sh scripts/install_commit_template.sh`
-- Install hooks by running: `hooks/install_hooks.sh`
-- Install commit template via: `scripts/install_commit_template.sh`
-
-> Below is a sample README format which you could just edit
-# Sample Project Name
-This projects does plenty awesome which you would have to specify
+# Utility Manager
+This is a Utility Manager application that makes it easy for engineers to track the appliances in their
+place of work. Some of the main  EPICs are:
+- Engineer should be able to log the readings of parameters of an appliance to the app daily.
+- Engineers should be able to create and export reports from the app.
 
 ## Setup App
 Run the following commands:
 
-- Clone repo via git clone `https://github.com/chidioguejiofor/airtech-api.git`
+- Ensure you have `Python 3.7.2`  installed from [here](https://www.python.org/downloads/release/python-372/)
+- Install `pipenv` via `pip install pipenv`
+- Clone repo via  `git clone https://github.com/chidioguejiofor/utility-manager.git`
 - Start virtual environment via `pipenv shell`
 - Install dependencies via `pipenv install`
-- Make bash scripts executable via: ` chmod +x hooks/install_hooks.sh hooks/pre_commit.sh`
+- Make bash scripts executable via: ` chmod +x hooks/install_hooks.sh hooks/pre_commit.sh scripts/install_commit_template.sh`
 - Install hooks by running: `hooks/install_hooks.sh`
+- Install Git commit template by running: `scripts/install_commit_template.sh`
 - Use the `.env-sample` file to create a `.env` file with required environmental variables
 
 ## Linting Automation
@@ -40,15 +23,20 @@ The app is configured to automatically lint your files once you do a `git commit
 python files by running `yapf -ir $(find . -name '*.py')`. 
 Linting follows the [PE8 Style Guide](https://www.python.org/dev/peps/pep-0008/)
 
+## Database and Migrations 
+To setup the database simply follow these steps:
+- Using your preferred tool, create the database and put the URL in the `DATABASE_URL` env variable
+- Upgrade your database by running: `flask db upgrade`
+- You should have your db setup properly
 
 ## Starting the app
-In order to start the app locally, run `<add-command-for-starting-your-app>`. 
+In order to start the app locally, run `flask run`. 
 
 ## Documentation
 You can all the endpoints in the postman documentation  here [![Open Docs](https://run.pstmn.io/button.svg)](link-to-docs.com)
 
-## Starting Redis and Celery
-Celery is used as the message broker for the API. We use it to run heavy task(via celery-workers) and run cronjobs(via celery-beat).
+## Redis and Celery
+Celery is used as the message broker for the API. We use it to run heavy task(via celery-workers) and run cron-jobs(via celery-beat).
 
 #### Starting Redis
 In order to run celery, you would need to ensure that a `redis` is running. 
@@ -56,11 +44,11 @@ Using docker, you can achieve this by running `docker run -p 6379:6379 redis`. T
 
 If your `redis server` is running on a different port/host, you must specify the URL in the `.env` file via key `REDIS_SERVER_URL`
 
-#### Starting Redis
+#### Starting Celery
 Once Redis is up and running, you can now spin up celery in these steps:
 
-- Start celery worker by executing  `<command-for-redis>`
-- In a separate terminal, spin up the celery beat via `<command-for-celery>`
+- Start celery worker by executing  `celery -A  celery_config.celery_app worker --loglevel=info`
+- In a separate terminal, spin up the celery beat via `celery -A  celery_config.celery_scheduler beat --loglevel=info`
 
 ## Docker Setup
 You could also easily start the API, Celery and Redis by using docker in the following steps:
@@ -81,4 +69,8 @@ The above would free up memory that is used in your docker instance
 
 ## Running Tests
 You can run tests for the app via: `pytest --cov=api --cov-report=html`
+
+## Test Conventions
+All features added to the app must fully tested with the aim being 95% coverage. 
+Although the coverage is important, it more important to test the right things and necessary edge cases
 

@@ -1,20 +1,30 @@
 from settings import db
 from api.utils.time_util import TimeUtil
 from api.utils.exceptions import ModelsNotOfSameTypeException
+from sqlalchemy.ext.declarative import as_declarative, declared_attr
 
 
 class BaseModel(db.Model):
     __abstract__ = True
+
+    @declared_attr
+    def __tablename__(cls):
+        return cls.__name__
+
     id = db.Column(
         db.String(21),
         primary_key=True,
     )
-    created_at = db.Column(db.DateTime, default=TimeUtil.now)
-    updated_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime(timezone=True), default=TimeUtil.now)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=True)
 
     def save(self):
         db.session.add(self)
-        db.session.commit()
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            raise e
 
     @classmethod
     def bulk_create(cls, model_list):
@@ -31,17 +41,17 @@ class BaseModel(db.Model):
         db.session.commit()
 
     @classmethod
-    def update_by_filter(cls, condition, **kwargs):
+    def update_query(cls, query, **kwargs):
         """Updates models that meet a condition
 
         Filters the base model by a condition and updates it with the
         kwargs specified
 
         Args:
-            condition(SQLAlchemy BinaryExpression): The filter condition.
+            query(SQLAlchemy Query): The query to be updated.
             kwargs: The keyword representation of the updates
 
         Returns:
 
         """
-        return cls.query.filter(condition).update(kwargs)
+        return query.update(kwargs)

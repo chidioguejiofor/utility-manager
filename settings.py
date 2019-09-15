@@ -1,7 +1,6 @@
 from flask import Flask
 from flask_restplus import Api
 from sqlalchemy import event
-from flask_marshmallow import Marshmallow
 from api.utils.time_util import TimeUtil
 import os
 from flask import Blueprint
@@ -70,7 +69,6 @@ def create_app(current_env=os.getenv('ENVIRONMENT', 'production')):
 
     api = Api(app)
 
-    ma = Marshmallow(app)
     db.init_app(app)
     migrate = Migrate(app, db)
 

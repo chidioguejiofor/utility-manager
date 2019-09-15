@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "06458e855f37b2984f6a4f88cda555d3334932be0d7423d649d0a9f566d0f861"
+            "sha256": "9201f439a4010b642b24949a6d4b7514cd858e895b46e939e7cc13a0b5ced88e"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -139,14 +139,6 @@
             "index": "pypi",
             "version": "==3.0.8"
         },
-        "flask-marshmallow": {
-            "hashes": [
-                "sha256:4f507f883838b397638a3a36c7d36ee146b255a49db952f5d9de3f6f4522e8a8",
-                "sha256:69e99e3a123393894884a032ae2d11e6bdf4519a505819b66cec7eda32057741"
-            ],
-            "index": "pypi",
-            "version": "==0.10.1"
-        },
         "flask-migrate": {
             "hashes": [
                 "sha256:6fb038be63d4c60727d5dfa5f581a6189af5b4e2925bc378697b4f0a40cfb4e1",
@@ -248,18 +240,19 @@
         },
         "marshmallow": {
             "hashes": [
-                "sha256:5d6412948383b8d628b9d267045e83a5c4c387300ee7d7d57edc93d375be2660",
-                "sha256:76603a8a7517e753ff4ab811b8b987bc14cba206cf0aa7473142120dee6b9a78"
-            ],
-            "version": "==3.0.4"
-        },
-        "marshmallow-sqlalchemy": {
-            "hashes": [
-                "sha256:b53ae45f6f113ae5433211786129ecb6eaf3646a3a333e769eeb22593b6dbe9c",
-                "sha256:c4dd561ff42f39e44619e6558a28da7154fea62ffada6815403f1381762c87db"
+                "sha256:4b790b6910c0261d22de296ed42569affcbd80097eb770eb6088a79bef69c330",
+                "sha256:fe31ac05fbde972909a752d12b808cbbc15a50ed0a692410e1b227ff10b483ff"
             ],
             "index": "pypi",
-            "version": "==0.19.0"
+            "version": "==3.0.5"
+        },
+        "marshmallow-enum": {
+            "hashes": [
+                "sha256:38e697e11f45a8e64b4a1e664000897c659b60aa57bfa18d44e226a9920b6e58",
+                "sha256:57161ab3dbfde4f57adeb12090f39592e992b9c86d206d02f6bd03ebec60f072"
+            ],
+            "index": "pypi",
+            "version": "==1.5.1"
         },
         "mock": {
             "hashes": [
@@ -445,11 +438,12 @@
         },
         "sendgrid": {
             "hashes": [
-                "sha256:297d33363a70df9b39419210e1273b165d487730e85c495695e0015bc626db71",
-                "sha256:8b82c8c801dde8180a567913a9f80d8a63f38e39f209edde302b6df899b4bca1"
+                "sha256:a9999878aad90e32d7b62464454adc70bcef40085c729355ea58717bb0ea0dbd",
+                "sha256:cb0b21a83a54bc99d9befda1ea7b4f15fe8db362a152458e58abc5ce23d6d828",
+                "sha256:f04fee009c750b47ab984f3c4a735facacc7fba902052d597f7e60b601e56bcc"
             ],
             "index": "pypi",
-            "version": "==6.0.5"
+            "version": "==6.1.0"
         },
         "six": {
             "hashes": [

@@ -1,5 +1,7 @@
 import pytest
 from settings import create_app, db
+from tests.mocks.organisation import valid_org_dict
+from api.models import Organisation
 
 
 @pytest.yield_fixture(scope='session')
@@ -16,9 +18,15 @@ def client(app):
     yield app.test_client()
 
 
-@pytest.fixture(scope='module')
+@pytest.yield_fixture(scope='module')
 def init_db(app):
     db.create_all()
     yield db
     db.session.close()
     db.drop_all()
+
+
+@pytest.fixture(scope='module')
+def valid_organisation(app):
+    org = Organisation(**valid_org_dict)
+    return org

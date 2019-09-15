@@ -26,8 +26,13 @@ Linting follows the [PE8 Style Guide](https://www.python.org/dev/peps/pep-0008/)
 ## Database and Migrations 
 To setup the database simply follow these steps:
 - Using your preferred tool, create the database and put the URL in the `DATABASE_URL` env variable
+- Generate migrations from model by running `flask db migrate`
 - Upgrade your database by running: `flask db upgrade`
-- You should have your db setup properly
+- You should have your db setup properly.
+
+Subsequently, if a new model is created or while rebasing data run the following to update your db:
+- Generate migrations for new changes via: `flask db migrate`
+- Update your database via `flask db upgrade`
 
 ## Starting the app
 In order to start the app locally, run `flask run`. 

@@ -2,7 +2,7 @@ valid_org_dict = {
     'name': 'Valid Organisation',
     'website': 'valid.org',
     'address': 'my village, Oshodi',
-    'email': 'Valid Email',
+    'email': 'email@email.com',
     'display_name': 'Valid Org',
 }
 

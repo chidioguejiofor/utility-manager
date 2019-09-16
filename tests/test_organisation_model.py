@@ -1,7 +1,7 @@
 import pytest
 import sqlalchemy
 from api.utils.error_messages import serialization_error
-from api.models import Organisation
+from api.models import Organisation, Membership, RoleEnum
 from api.schemas import OrganisationSchema as Schema
 from tests.mocks.organisation import user_input_dict, valid_org_dict
 
@@ -89,3 +89,21 @@ class TestOrganisationModel:
         org_2 = Organisation(**valid_dict)
         with pytest.raises(sqlalchemy.exc.IntegrityError):
             assert org_2.save()
+
+    def test_load_memberships_for_organisation_succeeds(
+            self, init_db, valid_user_obj):
+        org = Organisation(**valid_org_dict)
+        org.name = 'Mock Name'
+        org.email = 'email2@email.com'
+        org.save()
+        valid_user_obj.save()
+        membership = Membership(organisation=org, member=valid_user_obj)
+        membership.save()
+
+        org = Organisation.query.filter(Organisation.id == org.id).first()
+        member = org.memberships[0].member
+        assert member.id == valid_user_obj.id
+        assert member.first_name == valid_user_obj.first_name
+        assert member.last_name == valid_user_obj.last_name
+        assert member.password_hash == valid_user_obj.password_hash
+        assert membership.role == RoleEnum.REGULAR_USERS

@@ -1,7 +1,8 @@
 import pytest
 from settings import create_app, db
 from tests.mocks.organisation import valid_org_dict
-from api.models import Organisation
+from tests.mocks.user import valid_user_one_dict
+from api.models import Organisation, User
 
 
 @pytest.yield_fixture(scope='session')
@@ -30,3 +31,9 @@ def init_db(app):
 def valid_organisation(app):
     org = Organisation(**valid_org_dict)
     return org
+
+
+@pytest.fixture(scope='module')
+def valid_user_obj(app):
+    user = User(**valid_user_one_dict)
+    return user

@@ -4,7 +4,7 @@ from api.utils.error_messages import serialization_error
 
 
 class FieldValidator:
-    def __init__(self, min_length=0, max_length=0, *args, **kwargs):
+    def __init__(self, min_length=None, max_length=None, *args, **kwargs):
         validator_list = (self._get_min_length_validator(min_length) +
                           self._get_max_length_validator(max_length) +
                           kwargs.pop('validate', []))
@@ -23,20 +23,17 @@ class FieldValidator:
                     message=
                     f'This field must be greater than {min_length} characters')
 
-        return [_validator] if not min_length else []
+        return [_validator] if min_length else []
 
     @staticmethod
     def _get_max_length_validator(max_length):
-        if not max_length:
-            return []
-
         def _validator(data):
             if len(data) > max_length:
                 raise ValidationError(
                     message=
                     f'This field must be less than {max_length} characters')
 
-        return [_validator]
+        return [_validator] if max_length else []
 
 
 class StringField(FieldValidator, fields.String):

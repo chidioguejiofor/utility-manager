@@ -22,3 +22,6 @@ class Organisation(BaseModel):
     logo_url = db.Column(db.String(), nullable=True)
     email = db.Column(db.String(), nullable=False, unique=True)
     password_hash = db.Column(db.TEXT, nullable=True)
+    memberships = db.relationship('Membership',
+                                  back_populates='organisation',
+                                  lazy=True)

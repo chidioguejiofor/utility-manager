@@ -38,8 +38,24 @@ class FieldValidator:
 
 class StringField(FieldValidator, fields.String):
     def _deserialize(self, value, attr, data, **kwargs):
-        data = super()._deserialize(value, attr, data, **kwargs)
-        return data.strip()
+        """This method is called when data is being loaded to python
+
+        It removes the all surrounding spaces and changes double spaces to one space
+
+b
+        Args:
+            value: value send from user
+            attr: the field name
+            data:  The raw input data passed to the Schema.load.
+            **kwargs: Field-specific keyword arguments.
+
+        Returns:
+            (str):  A deserialized value with no double-space
+
+        """
+        des_value = super()._deserialize(value, attr, data, **kwargs)
+
+        return re.sub("\\s{2,}", " ", des_value.strip())
 
 
 class RegexField(StringField):
@@ -68,3 +84,20 @@ class AlphanumericField(RegexField):
                          regex_message=serialization_error['alpha_numeric'],
                          *args,
                          **kwargs)
+
+
+class AlphaOnlyField(StringField):
+    def __init__(self, *args, **kwargs):
+        validations = kwargs.get('validate', [])
+        validator = self._get_alpha_validator()
+        validations = validations + validator
+        super().__init__(*args, validate=validations, **kwargs)
+
+    @staticmethod
+    def _get_alpha_validator():
+        def _validator(data):
+            if not data.strip().isalpha():
+                raise ValidationError(
+                    message=serialization_error['alpha_only'])
+
+        return [_validator]

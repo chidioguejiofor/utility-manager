@@ -1,10 +1,10 @@
-from .base import BaseSchema, StringField, AlphanumericField
-from ..models import Organisation as OrganisationModel, SubscriptionEnum
 from marshmallow import fields
 from marshmallow_enum import EnumField
+from .base import AbstractSchemaWithTimeStamps, StringField, AlphanumericField, BaseSchema
+from ..models import Organisation as OrganisationModel, SubscriptionEnum, RoleEnum
 
 
-class Organisation(BaseSchema):
+class Organisation(AbstractSchemaWithTimeStamps):
     __model__ = OrganisationModel
     name = AlphanumericField(min_length=2, max_length=120, allow_spaces=True)
     website = StringField()
@@ -22,3 +22,13 @@ class Organisation(BaseSchema):
         data_key='logoUrl',
         dump_only=True,
     )
+
+
+class _MembershipSchema(BaseSchema):
+    from .user import User as UserSchema
+    member = fields.Nested(UserSchema)
+    role = EnumField(enum=RoleEnum, by_value=False)
+
+
+class OrganisationMembership(Organisation):
+    memberships = fields.Nested(_MembershipSchema, many=True)

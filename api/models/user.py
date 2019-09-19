@@ -13,6 +13,7 @@ class User(BaseModel):
     memberships = db.relationship('Membership',
                                   back_populates='member',
                                   lazy=True)
+    organisations = None
     __table_args__ = (db.UniqueConstraint(
         'email', name='user_email_unique_constraint'), )
 

@@ -2,8 +2,9 @@ import pytest
 import sqlalchemy
 from api.utils.error_messages import serialization_error
 from api.models import Organisation, Membership, RoleEnum
-from api.schemas import OrganisationSchema as Schema
+from api.schemas import OrganisationSchema as Schema, OrganisationMembershipSchema
 from tests.mocks.organisation import user_input_dict, valid_org_dict
+from marshmallow import ValidationError
 
 
 class TestOrganisationSerializer:
@@ -29,7 +30,7 @@ class TestOrganisationSerializer:
     def test_load_invalid_email_should_raise_exception(self, app):
         valid_user_input = dict(**user_input_dict)
         valid_user_input['email'] = 'Invalid Email'
-        with pytest.raises(Exception) as e:
+        with pytest.raises(ValidationError) as e:
             assert Schema().load(valid_user_input)
         assert e.value.messages['email'][0] == 'Not a valid email address.'
 
@@ -38,7 +39,7 @@ class TestOrganisationSerializer:
         invalid_dict.update(name='Comp#$%^&**&^%$',
                             email='info21@test-comp.com')
 
-        with pytest.raises(Exception) as e:
+        with pytest.raises(ValidationError) as e:
             assert Schema().load(invalid_dict)
         assert e.value.messages['name'][0] == serialization_error[
             'alpha_numeric']
@@ -52,6 +53,25 @@ class TestOrganisationSerializer:
         org_obj = Schema().load(data_with_name_with_spaces)
         assert isinstance(org_obj, Organisation)
         assert org_obj.name == data_with_name_with_spaces['name'].strip()
+
+    def test_organisation_membership_is_properly_serialized(
+            self, init_db, valid_user_obj):
+        org = Organisation(**valid_org_dict)
+        org.name = 'Mock Name1'
+        org.email = 'email21@email.com'
+        org.save()
+        valid_user_obj.save()
+        membership = Membership(organisation=org, member=valid_user_obj)
+        membership.save()
+
+        org = Organisation.query.filter(Organisation.id == org.id).first()
+        dumped_data = OrganisationMembershipSchema().dump(org)
+
+        assert len(dumped_data['memberships']) == 1
+        assert dumped_data['name'] == org.name
+        assert dumped_data['website'] == org.website
+        assert dumped_data['memberships'][0]['role'] == 'REGULAR_USER'
+        assert dumped_data['memberships'][0]['id'] == membership.id
 
 
 class TestOrganisationModel:
@@ -106,4 +126,4 @@ class TestOrganisationModel:
         assert member.first_name == valid_user_obj.first_name
         assert member.last_name == valid_user_obj.last_name
         assert member.password_hash == valid_user_obj.password_hash
-        assert membership.role == RoleEnum.REGULAR_USERS
+        assert membership.role == RoleEnum.REGULAR_USER

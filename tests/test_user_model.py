@@ -1,17 +1,16 @@
 import pytest
-import sqlalchemy
 from marshmallow import ValidationError
-from .mocks.user import valid_user_one_dict, user_input_dict
-from .mocks.organisation import valid_org_dict, valid_org_two_dict
-
+from .mocks.user import UserGenerator
+from .mocks.organisation import OrganisationGenerator
 from api.schemas import UserMembershipSchema, UserSchema
 from api.utils.error_messages import serialization_error
 from api.models import User, Organisation, Membership, RoleEnum
+from api.utils.exceptions import UniqueConstraintException
 
 
 class TestUserSerializer:
-    def test_convert_user_model_to_json(self, init_db, valid_user_obj):
-        valid_user_obj.save()
+    def test_convert_user_model_to_json(self, init_db):
+        valid_user_obj = UserGenerator.generate_model_obj(save=True)
         user_dump_data = UserSchema().dump(valid_user_obj)
         dict_created_at_time = ' '.join(user_dump_data['createdAt'].split('T'))
         assert user_dump_data['firstName'] == valid_user_obj.first_name
@@ -21,34 +20,36 @@ class TestUserSerializer:
             str(valid_user_obj.created_at).split('T'))
 
     def test_load_data_from_user_to_model(self, app, init_db):
-        user_obj = UserSchema().load(user_input_dict)
+        api_sample_data = UserGenerator.generate_api_input_data()
+        user_obj = UserSchema().load(api_sample_data)
         assert isinstance(user_obj, User)
-        assert user_obj.first_name == user_input_dict['firstName']
-        assert user_obj.last_name == user_input_dict['lastName']
+        assert user_obj.first_name == api_sample_data['firstName']
+        assert user_obj.last_name == api_sample_data['lastName']
         assert user_obj.password_hash is not None
 
     def test_load_invalid_email_should_raise_exception(self, app):
-        valid_user_input = dict(**user_input_dict)
-        valid_user_input['email'] = 'Invalid Email'
+        api_sample_data = UserGenerator.generate_api_input_data()
+        api_sample_data['email'] = 'Invalid Email'
         with pytest.raises(ValidationError) as e:
-            assert UserSchema().load(valid_user_input)
+            assert UserSchema().load(api_sample_data)
         assert e.value.messages['email'][0] == serialization_error[
             'invalid_email']
 
     def test_load_first_name_containing_numbers_fails(self, app):
-        invalid_dict = dict(**user_input_dict)
-        invalid_dict.update(firstName='Chizo110', email='info21@test-comp.com')
-
+        api_sample_data = UserGenerator.generate_api_input_data()
+        api_sample_data.update(firstName='Chizo110',
+                               email='info21@test-comp.com')
         with pytest.raises(ValidationError) as e:
-            assert UserSchema().load(invalid_dict)
+            assert UserSchema().load(api_sample_data)
         assert e.value.messages['firstName'][0] == serialization_error[
             'alpha_only']
 
     def test_load_last_name_containing_numbers_fails(self, app):
-        invalid_dict = dict(**user_input_dict)
-        invalid_dict.update(lastName='Chizo110', email='info21@test-comp.com')
+        api_sample_data = UserGenerator.generate_api_input_data()
+        api_sample_data.update(lastName='Chizo110',
+                               email='info21@test-comp.com')
         with pytest.raises(ValidationError) as e:
-            assert UserSchema().load(invalid_dict)
+            assert UserSchema().load(api_sample_data)
         assert e.value.messages['lastName'][0] == serialization_error[
             'alpha_only']
 
@@ -56,21 +57,17 @@ class TestUserSerializer:
             self, app):
 
         name_with_spaces = '    James    '
-        data_with_name_with_spaces = dict(**user_input_dict)
-        data_with_name_with_spaces.update(firstName=name_with_spaces)
-        user_obj = UserSchema().load(data_with_name_with_spaces)
+        api_sample_data = UserGenerator.generate_api_input_data()
+        api_sample_data.update(firstName=name_with_spaces)
+        user_obj = UserSchema().load(api_sample_data)
         assert isinstance(user_obj, User)
-        assert user_obj.first_name == data_with_name_with_spaces[
-            'firstName'].strip()
+        assert user_obj.first_name == api_sample_data['firstName'].strip()
 
     def test_user_membership_serializers_should_be_able_to_get_organisations_of_a_user(
-            self, init_db, valid_user_obj):
-        org_one = Organisation(**valid_org_dict)
-        org_one.save()
-        org_two = Organisation(**valid_org_two_dict)
-        org_two.save()
-
-        valid_user_obj.save()
+            self, init_db):
+        org_one = OrganisationGenerator.generate_model_obj(save=True)
+        org_two = OrganisationGenerator.generate_model_obj(save=True)
+        valid_user_obj = UserGenerator.generate_model_obj(save=True)
         Membership(organisation=org_one, member=valid_user_obj).save()
         Membership(organisation=org_two, member=valid_user_obj).save()
 
@@ -82,34 +79,42 @@ class TestUserSerializer:
 
 
 class TestUserModel:
-    def test_user_model_handles_password_correctly(self, init_db,
-                                                   valid_user_obj):
+    def test_user_model_handles_password_correctly(
+            self,
+            init_db,
+    ):
+        valid_user_one_dict = UserGenerator.generate_model_obj_dict()
+        valid_user_obj = User(**valid_user_one_dict)
+        valid_user_obj.save()
         assert valid_user_obj.password == valid_user_one_dict['password']
         assert valid_user_obj.password_hash is not None
         assert valid_user_obj.email == valid_user_one_dict['email']
 
-    def test_saving_the_user_model_should_succeed(self, init_db,
-                                                  valid_user_obj):
+    def test_saving_the_user_model_should_succeed(self, init_db):
+        valid_user_one_dict = UserGenerator.generate_model_obj_dict()
+        valid_user_obj = User(**valid_user_one_dict)
         valid_user_obj.save()
         assert valid_user_obj.password == valid_user_one_dict['password']
         assert valid_user_obj.password_hash is not None
         assert valid_user_obj.email == valid_user_one_dict['email']
 
     def test_trying_to_save_a_user_with_existing_email_should_fail(
-            self, init_db, valid_user_obj):
+            self, init_db):
+        model_dict = UserGenerator.generate_model_obj_dict()
+        valid_user_obj = User(**model_dict)
         valid_user_obj.save()
 
-        user_two = User(**valid_user_one_dict)
-        with pytest.raises(sqlalchemy.exc.IntegrityError) as e:
+        user_two = User(**model_dict)
+        with pytest.raises(UniqueConstraintException) as e:
             user_two.save()
+        assert e.value.message == 'The email or username already exists'
 
     def test_user_should_be_able_to_join_an_organisation(
-            self, init_db, valid_user_obj):
-        org_dict = dict(**valid_org_dict)
-        org_dict.update(name='Valid_Org 2', email='valid_orgII@email.com')
-        org = Organisation(**org_dict)
-        org.save()
-        valid_user_obj.save()
+            self,
+            init_db,
+    ):
+        org = OrganisationGenerator.generate_model_obj(save=True)
+        valid_user_obj = UserGenerator.generate_model_obj(save=True)
         membership = Membership(organisation=org, member=valid_user_obj)
         membership.save()
 

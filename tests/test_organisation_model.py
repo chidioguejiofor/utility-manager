@@ -1,82 +1,78 @@
 import pytest
-import sqlalchemy
+from .mocks.user import UserGenerator
+from .mocks.organisation import OrganisationGenerator
 from api.utils.error_messages import serialization_error
 from api.models import Organisation, Membership, RoleEnum
 from api.schemas import OrganisationSchema as Schema, OrganisationMembershipSchema
-from tests.mocks.organisation import user_input_dict, valid_org_dict
 from marshmallow import ValidationError
+from api.utils.exceptions import UniqueConstraintException
 
 
 class TestOrganisationSerializer:
-    def test_convert_org_model_to_json(self, init_db, valid_organisation):
-        valid_organisation.save()
-        org_dict = Schema().dump(valid_organisation)
+    def test_convert_org_model_to_json(self, init_db):
+        org = OrganisationGenerator.generate_model_obj(save=True)
+        org_dict = Schema().dump(org)
         dict_created_at_time = ' '.join(org_dict['createdAt'].split('T'))
-        assert org_dict['name'] == valid_organisation.name
-        assert org_dict['displayName'] == valid_organisation.display_name
-        assert org_dict['updatedAt'] == valid_organisation.updated_at
-        assert dict_created_at_time == ' '.join(
-            str(valid_organisation.created_at).split('T'))
-        assert org_dict[
-            'subscriptionType'] == valid_organisation.subscription_type.value
+        assert org_dict['name'] == org.name
+        assert org_dict['displayName'] == org.display_name
+        assert org_dict['updatedAt'] == org.updated_at
+        assert dict_created_at_time == ' '.join(str(org.created_at).split('T'))
+        assert org_dict['subscriptionType'] == org.subscription_type.value
 
-    def test_load_user_input_to_model(self, app, init_db):
-        org_obj = Schema().load(user_input_dict)
+    def test_load_user_input_to_model(self, init_db):
+        api_dict = OrganisationGenerator.generate_api_input_data()
+        org_obj = Schema().load(api_dict)
         assert isinstance(org_obj, Organisation)
-        assert org_obj.display_name == user_input_dict['displayName']
-        assert org_obj.name == user_input_dict['name']
-        assert org_obj.website == user_input_dict['website']
+        assert org_obj.display_name == api_dict['displayName']
+        assert org_obj.name == api_dict['name']
+        assert org_obj.website == api_dict['website']
 
     def test_load_invalid_email_should_raise_exception(self, app):
-        valid_user_input = dict(**user_input_dict)
-        valid_user_input['email'] = 'Invalid Email'
+        api_dict = OrganisationGenerator.generate_api_input_data()
+        api_dict['email'] = 'Invalid Email'
         with pytest.raises(ValidationError) as e:
-            assert Schema().load(valid_user_input)
+            assert Schema().load(api_dict)
         assert e.value.messages['email'][0] == 'Not a valid email address.'
 
     def test_load_name_containing_symbols_fails(self, app):
-        invalid_dict = dict(**user_input_dict)
-        invalid_dict.update(name='Comp#$%^&**&^%$',
-                            email='info21@test-comp.com')
+        api_dict = OrganisationGenerator.generate_api_input_data()
+        api_dict.update(name='Comp#$%^&**&^%$', email='info21@test-comp.com')
 
         with pytest.raises(ValidationError) as e:
-            assert Schema().load(invalid_dict)
+            assert Schema().load(api_dict)
         assert e.value.messages['name'][0] == serialization_error[
             'alpha_numeric']
 
     def test_leading_space_should_be_removed_while_loading_name_field(
             self, app):
-
+        api_dict = OrganisationGenerator.generate_api_input_data()
         name_with_spaces = '    James    '
-        data_with_name_with_spaces = dict(**user_input_dict)
-        data_with_name_with_spaces.update(name=name_with_spaces)
-        org_obj = Schema().load(data_with_name_with_spaces)
+        api_dict.update(name=name_with_spaces)
+        org_obj = Schema().load(api_dict)
         assert isinstance(org_obj, Organisation)
-        assert org_obj.name == data_with_name_with_spaces['name'].strip()
+        assert org_obj.name == api_dict['name'].strip()
 
-    def test_organisation_membership_is_properly_serialized(
-            self, init_db, valid_user_obj):
-        org = Organisation(**valid_org_dict)
-        org.name = 'Mock Name1'
-        org.email = 'email21@email.com'
-        org.save()
-        valid_user_obj.save()
-        membership = Membership(organisation=org, member=valid_user_obj)
+    def test_organisation_membership_is_properly_serialized(self, init_db):
+        valid_org = OrganisationGenerator.generate_model_obj(save=True)
+        valid_user_obj = UserGenerator.generate_model_obj(save=True)
+        membership = Membership(organisation=valid_org, member=valid_user_obj)
         membership.save()
 
-        org = Organisation.query.filter(Organisation.id == org.id).first()
-        dumped_data = OrganisationMembershipSchema().dump(org)
+        valid_org = Organisation.query.filter(
+            Organisation.id == valid_org.id).first()
+        dumped_data = OrganisationMembershipSchema().dump(valid_org)
 
         assert len(dumped_data['memberships']) == 1
-        assert dumped_data['name'] == org.name
-        assert dumped_data['website'] == org.website
+        assert dumped_data['name'] == valid_org.name
+        assert dumped_data['website'] == valid_org.website
         assert dumped_data['memberships'][0]['role'] == 'REGULAR_USER'
         assert dumped_data['memberships'][0]['id'] == membership.id
 
 
 class TestOrganisationModel:
-    def test_save_valid_model_succeeds(self, init_db, valid_organisation):
-        valid_organisation.save()
+    def test_save_valid_model_succeeds(self, init_db):
+        valid_organisation = OrganisationGenerator.generate_model_obj(
+            save=True)
         org_query = Organisation.query.filter(
             Organisation.id == valid_organisation.id)
         org = org_query.first()
@@ -86,37 +82,27 @@ class TestOrganisationModel:
 
     def test_attempt_to_save_organisation_with_existing_email_fails(
             self, init_db):
-        valid_dict = dict(**valid_org_dict)
-        valid_dict.update(name='Test Comp3', email='info13@test-comp.com')
-        valid_org = Organisation(**valid_dict)
-        valid_org.save()
-
+        valid_dict = OrganisationGenerator.generate_model_obj_dict()
+        Organisation(**valid_dict).save()
         # This creates  the organisation as above but with a different  name and same email
         valid_dict.update(name='Test Comp')
-        org_2 = Organisation(**valid_dict)
-        with pytest.raises(sqlalchemy.exc.IntegrityError):
-            assert org_2.save()
+        with pytest.raises(UniqueConstraintException) as e:
+            assert Organisation(**valid_dict).save()
+        assert e.value.message == 'The name or email already exists'
 
     def test_attempt_to_save_organisation_with_existing_name_fails(
             self, init_db):
-        valid_dict = dict(**valid_org_dict)
-        valid_dict.update(name='Test Comp22', email='info111@test-comp.com')
-        valid_org = Organisation(**valid_dict)
-        valid_org.save()
+        valid_dict = OrganisationGenerator.generate_model_obj_dict()
+        Organisation(**valid_dict).save()
+        # This creates  the organisation as above but with a different  name and same email
+        valid_dict.update(email='TestComp@email.com')
+        with pytest.raises(UniqueConstraintException) as e:
+            assert Organisation(**valid_dict).save()
+        assert e.value.message == 'The name or email already exists'
 
-        # This creates  the organisation as above but with a different  email and same name
-        valid_dict.update(email='info2@test-comp.com')
-        org_2 = Organisation(**valid_dict)
-        with pytest.raises(sqlalchemy.exc.IntegrityError):
-            assert org_2.save()
-
-    def test_load_memberships_for_organisation_succeeds(
-            self, init_db, valid_user_obj):
-        org = Organisation(**valid_org_dict)
-        org.name = 'Mock Name'
-        org.email = 'email2@email.com'
-        org.save()
-        valid_user_obj.save()
+    def test_load_memberships_for_organisation_succeeds(self, init_db):
+        org = OrganisationGenerator.generate_model_obj(save=True)
+        valid_user_obj = UserGenerator.generate_model_obj(save=True)
         membership = Membership(organisation=org, member=valid_user_obj)
         membership.save()
 

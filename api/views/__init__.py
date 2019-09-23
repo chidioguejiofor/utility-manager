@@ -1,1 +1,1 @@
-from .say_hello import HelloWorld
+from .authentication import Register

@@ -23,6 +23,7 @@ numpy = "*"
 marshmallow = "*"
 marshmallow-enum = "*"
 passlib = "*"
+faker = "*"
 
 [dev-packages]
 yapf = "*"

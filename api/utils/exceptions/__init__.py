@@ -1,4 +1,4 @@
-class ModelsNotOfSameTypeException(Exception):
-    def __init__(self, *args, **kwargs):
-        super().__init__('All the models must be of the same type', *args,
-                         **kwargs)
+class UniqueConstraintException(Exception):
+    def __init__(self, message, *args, **kwargs):
+        super().__init__(message, *args, **kwargs)
+        self.message = message

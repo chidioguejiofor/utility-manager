@@ -1,5 +1,5 @@
 from .custom_fields import *
-from marshmallow import Schema, post_load
+from marshmallow import Schema, post_load, pre_load
 
 
 class BaseSchema(Schema):
@@ -9,6 +9,15 @@ class BaseSchema(Schema):
     @post_load
     def create_objects(self, data, **kwargs):
         return self.__model__(**data)
+
+    def dump_success_data(self, model_obj, message=None):
+        dump_data = {
+            'status': 'success',
+            'data': self.dump(model_obj),
+        }
+        if message:
+            dump_data['message'] = message
+        return dump_data
 
 
 class AbstractSchemaWithTimeStamps(BaseSchema):

@@ -12,7 +12,7 @@ class Subscription(enum.Enum):
 
 
 class Organisation(BaseModel):
-    name = db.Column(db.String(120), nullable=False, unique=True)
+    name = db.Column(db.String(120), nullable=False)
     display_name = db.Column(db.String(120), nullable=False)
     website = db.Column(db.String(), nullable=False)
     address = db.Column(db.String(), nullable=False)
@@ -20,8 +20,16 @@ class Organisation(BaseModel):
                                   nullable=False,
                                   default=Subscription.FREE)
     logo_url = db.Column(db.String(), nullable=True)
-    email = db.Column(db.String(), nullable=False, unique=True)
+    email = db.Column(
+        db.String(),
+        nullable=False,
+    )
     password_hash = db.Column(db.TEXT, nullable=True)
     memberships = db.relationship('Membership',
                                   back_populates='organisation',
                                   lazy=True)
+
+    __unique_constraints__ = (
+        ('name', 'org_unique_name_constraint'),
+        ('email', 'org_email_unique_constraint'),
+    )

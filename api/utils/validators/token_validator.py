@@ -8,5 +8,5 @@ class TokenValidator:
         pass
 
     @classmethod
-    def validate_token_decorator(self):
+    def validate_token_decorator(cls):
         return True

@@ -1,22 +1,26 @@
-valid_org_dict = {
-    'name': 'Valid Organisation',
-    'website': 'valid.org',
-    'address': 'my village, Oshodi',
-    'email': 'email@email.com',
-    'display_name': 'Valid Org',
-}
+from . import fake, BaseGenerator
+from api.models import Organisation
 
-valid_org_two_dict = {
-    'name': 'Valid Organisation 2',
-    'website': 'valid2.org',
-    'address': 'my village, Oshodi',
-    'email': 'emai2l@email.com',
-    'display_name': 'Valid Org2',
-}
-user_input_dict = {
-    'name': 'Valid Organisation',
-    'website': 'valid.org',
-    'address': 'my village, Oshodi',
-    'email': 'email@email.com',
-    'displayName': 'Valid Org',
-}
+
+class OrganisationGenerator(BaseGenerator):
+    __model__ = Organisation
+
+    @classmethod
+    def generate_api_input_data(cls):
+        return {
+            'name': fake.first_name(),
+            'website': fake.url(),
+            'address': fake.address(),
+            'email': fake.email(),
+            'displayName': fake.first_name(),
+        }
+
+    @classmethod
+    def generate_model_obj_dict(cls):
+        return {
+            'name': fake.first_name(),
+            'website': fake.url(),
+            'address': fake.address(),
+            'email': fake.email(),
+            'display_name': fake.first_name(),
+        }

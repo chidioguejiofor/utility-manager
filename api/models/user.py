@@ -4,6 +4,10 @@ from .base import BaseModel
 
 
 class User(BaseModel):
+    username = db.Column(
+        db.String(20),
+        nullable=False,
+    )
     first_name = db.Column(db.String(20), nullable=False)
     last_name = db.Column(db.String(20), nullable=False)
     email = db.Column(db.String(320), nullable=False)
@@ -14,8 +18,9 @@ class User(BaseModel):
                                   back_populates='member',
                                   lazy=True)
     organisations = None
-    __table_args__ = (db.UniqueConstraint(
-        'email', name='user_email_unique_constraint'), )
+
+    __unique_constraints__ = (('email', 'user_email_unique_constraint'),
+                              ('username', 'username_unique_constraint'))
 
     @property
     def password(self):

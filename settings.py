@@ -34,6 +34,7 @@ class BaseConfig:
 class ProductionConfig(BaseConfig):
     TESTING = False
     FLASK_ENV = 'production'
+    PROPAGATE_EXCEPTIONS = True
 
 
 class StagingConfig(BaseConfig):
@@ -104,14 +105,16 @@ def create_error_handlers(app):
     def handle_unique_errors(error):
         return {'status': 'error', 'message': error.message}, 409
 
+    @app.errorhandler(Exception)
+    def handle_unique_errors(error):
+        return {'status': 'error', 'message': 'Unknown Error'}, 500
 
-def create_app(current_env=os.getenv('ENVIRONMENT', 'production')):
+
+def create_app(current_env=os.getenv('FLASK_ENV', 'production')):
     app = Flask(__name__)
     CORS(app, origins=['http://127.0.0.1:5500'], supports_credentials=True)
     app.config.from_object(env_mapper[current_env])
-
     api = Api(app)
-
     db.init_app(app)
     migrate = Migrate(app, db)
 

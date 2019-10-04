@@ -3,8 +3,9 @@
 .env
 __pycache__
 __pycache__/*
-**/*/__pycache__
+**/__pycache__
 .pytest_cache
 *coverage*
 docker-junk
 htmlcov
+**/*.pyc

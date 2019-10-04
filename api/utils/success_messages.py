@@ -4,3 +4,4 @@ msg_dict = {
 }
 
 CREATED = 'The {} was created successfully'
+LOGIN = 'User was successfully logged in'

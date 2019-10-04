@@ -119,12 +119,12 @@ workflows:
   run_test_and_deploy_app:
       jobs:
         - run_test_and_upload_coverage
-#        - deploy:
-#            requires:
-#              - run_test_and_upload_coverage
-#            filters:
-#              branches:
-#                only:
-#                  - staging
+        - deploy:
+            requires:
+              - run_test_and_upload_coverage
+            filters:
+              branches:
+                only:
+                  - staging
 
 

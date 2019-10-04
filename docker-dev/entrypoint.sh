@@ -4,8 +4,7 @@ echo "<<< API is sleeping for 30 seconds to allow Database to connect >>> "
 sleep 30 # waiting for the postgres db and redis to start up first
 
 echo "<<< API is now trying to connect to the database >>> "
-echo "<<< Making migrations >>> "
-echo "<<< Migrating Database >>> "
+echo "<<< Upgrade Database >>> "
 flask db upgrade # migrate db
 
 sleep 6

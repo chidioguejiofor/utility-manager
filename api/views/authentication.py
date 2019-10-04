@@ -41,7 +41,7 @@ class Login(BaseView):
 
             token = TokenValidator.create_token(user_json['data'])
             secure_flag = '; secure' if os.getenv(
-                'ENVIRONMENT') != 'development' else ''
+                'FLASK_ENV') != 'development' else ''
             headers = {'Set-Cookie': f'token={token}; HttpOnly{secure_flag}'}
             return user_json, 200, headers
 

@@ -1,4 +1,4 @@
-
+[![CircleCI](https://circleci.com/gh/chidioguejiofor/utility-manager.svg?style=svg)](https://circleci.com/gh/chidioguejiofor/utility-manager)
 # Utility Manager
 This is a Utility Manager application that makes it easy for engineers to track the appliances in their
 place of work. Some of the main  EPICs are:

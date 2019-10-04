@@ -1,10 +1,70 @@
-from api.utils.success_messages import CREATED
+from api.utils.success_messages import CREATED, LOGIN
 from api.utils.error_messages import serialization_error
 from api.models import User
 from .mocks.user import UserGenerator
 import json
 
 REGISTER_URL = '/api/auth/register'
+LOGIN_URL = '/api/auth/login'
+
+
+class TestLoginEndpoint:
+    def test_user_should_be_logged_in_once_correct_email_and_password_is_provided(
+            self, init_db, client):
+        valid_user = UserGenerator.generate_model_obj(save=True)
+        user_data = {
+            'usernameOrEmail': valid_user.email,
+            'password': valid_user.password,
+        }
+        response = client.post(LOGIN_URL,
+                               data=json.dumps(user_data),
+                               content_type="application/json")
+        response_body = json.loads(response.data)
+        response_data = response_body['data']
+        user = User.query.filter(User.email == response_data['email']).first()
+        assert response.status_code == 200
+        assert 'data' in response_body
+        assert user.first_name == response_data['firstName']
+        assert user.last_name == response_data['lastName']
+        assert response_body['status'] == 'success'
+        assert response_body['message'] == LOGIN
+
+    def test_user_should_be_logged_in_once_correct_username_and_password_is_provided(
+            self, init_db, client):
+        valid_user = UserGenerator.generate_model_obj(save=True)
+        user_data = {
+            'usernameOrEmail': valid_user.username,
+            'password': valid_user.password,
+        }
+        response = client.post(LOGIN_URL,
+                               data=json.dumps(user_data),
+                               content_type="application/json")
+        response_body = json.loads(response.data)
+        response_data = response_body['data']
+        user = User.query.filter(User.email == response_data['email']).first()
+        assert response.status_code == 200
+        assert 'data' in response_body
+        assert user.first_name == response_data['firstName']
+        assert user.last_name == response_data['lastName']
+        assert response_body['status'] == 'success'
+        assert response_body['message'] == LOGIN
+
+    def test_login_should_fail_when_user_password_is_incorrect(
+            self, init_db, client):
+        valid_user = UserGenerator.generate_model_obj(save=True)
+        user_data = {
+            'usernameOrEmail': valid_user.username,
+            'password': 'some_very_invalid2384798_thing.password',
+        }
+        response = client.post(LOGIN_URL,
+                               data=json.dumps(user_data),
+                               content_type="application/json")
+        response_body = json.loads(response.data)
+        print(response_body)
+        assert response.status_code == 400
+        assert 'data' not in response_body
+        assert response_body['status'] == 'error'
+        assert response_body['message'] == serialization_error['login_failed']
 
 
 class TestRegisterEndpoint:

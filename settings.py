@@ -2,20 +2,23 @@ from flask import Flask
 from flask_restplus import Api
 from sqlalchemy import event
 from api.utils.time_util import TimeUtil
-from api.utils.error_messages import serialization_error
-from api.utils.exceptions import UniqueConstraintException
+from api.utils.error_messages import serialization_error, authentication_errors
+from api.utils.exceptions import UniqueConstraintException, MessageOnlyResponseException
 import os
 from flask import Blueprint
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from marshmallow.exceptions import ValidationError
+from flask_cors import CORS
 import dotenv
+from jwt.exceptions import PyJWTError, ExpiredSignature
 
 db = SQLAlchemy()
 dotenv.load_dotenv()
 api_blueprint = Blueprint('api_bp', __name__, url_prefix='/api')
 bp = Blueprint('errors', __name__)
 router = Api(api_blueprint)
+endpoint = router.route
 
 
 class BaseConfig:
@@ -71,10 +74,31 @@ def create_error_handlers(app):
     @app.errorhandler(ValidationError)
     def handle_errors(error):
         return {
-            'errors': error.messages,
             'status': 'error',
+            'errors': error.messages,
             'message': serialization_error['invalid_field_data']
         }, 400
+
+    @app.errorhandler(MessageOnlyResponseException)
+    def handle_errors(error):
+        return {
+            'status': 'error',
+            'message': error.message,
+        }, error.status_code
+
+    @app.errorhandler(PyJWTError)
+    def handle_errors(error):
+        print(error.__dict__)
+        if isinstance(error, ExpiredSignature):
+            return {
+                'status': 'error',
+                'message': authentication_errors['session_expired'],
+            }, 401
+        else:
+            return {
+                'status': 'error',
+                'message': authentication_errors['token_invalid'],
+            }, 401
 
     @app.errorhandler(UniqueConstraintException)
     def handle_unique_errors(error):
@@ -83,6 +107,7 @@ def create_error_handlers(app):
 
 def create_app(current_env=os.getenv('ENVIRONMENT', 'production')):
     app = Flask(__name__)
+    CORS(app, origins=['http://127.0.0.1:5500'], supports_credentials=True)
     app.config.from_object(env_mapper[current_env])
 
     api = Api(app)

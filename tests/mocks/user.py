@@ -1,5 +1,7 @@
 from . import fake, BaseGenerator
 from api.models import User
+from api.utils.token_validator import TokenValidator
+from api.utils.constants import LOGIN_TOKEN
 
 
 class UserGenerator(BaseGenerator):
@@ -13,7 +15,19 @@ class UserGenerator(BaseGenerator):
             'lastName': fake.last_name(),
             'email': fake.email(),
             'password': fake.password(),
+            'redirectURL': fake.url(),
         }
+
+    @staticmethod
+    def generate_token(user, token_type=LOGIN_TOKEN, **time_kwargs):
+        url_key = 'redirectURL' if token_type == LOGIN_TOKEN else 'redirect_url'
+        return TokenValidator.create_token(
+            {
+                'id': user.id,
+                'email': user.email,
+                url_key: user.redirect_url,
+                'type': token_type,
+            }, **time_kwargs)
 
     @classmethod
     def generate_model_obj_dict(cls):

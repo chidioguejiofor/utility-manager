@@ -11,6 +11,7 @@ from flask_migrate import Migrate
 from marshmallow.exceptions import ValidationError
 from flask_cors import CORS
 import dotenv
+import logging
 from jwt.exceptions import PyJWTError, ExpiredSignature
 
 db = SQLAlchemy()
@@ -107,6 +108,7 @@ def create_error_handlers(app):
 
     @app.errorhandler(Exception)
     def handle_unique_errors(error):
+        logging.exception(error)
         return {'status': 'error', 'message': 'Unknown Error'}, 500
 
 

@@ -2,6 +2,7 @@ from .base import AbstractSchemaWithTimeStamps, StringField, AlphaOnlyField, Bas
 from ..models import User as UserModel, RoleEnum
 from marshmallow import fields
 from marshmallow_enum import EnumField
+from marshmallow import Schema, post_load, pre_load
 
 
 class User(AbstractSchemaWithTimeStamps):
@@ -21,6 +22,9 @@ class User(AbstractSchemaWithTimeStamps):
     password = StringField(load_only=True, required=True)
     email = fields.Email(required=True)
     verified = fields.Boolean()
+    redirect_url = fields.URL(data_key='redirectURL',
+                              load_only=True,
+                              required=True)
 
 
 class _MembershipSchema(BaseSchema):

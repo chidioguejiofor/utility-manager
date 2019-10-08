@@ -1,1 +1,1 @@
-from .base_view import BaseView
+from .base_view import BaseView, CookieGeneratorMixin

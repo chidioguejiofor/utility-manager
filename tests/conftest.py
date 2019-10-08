@@ -11,7 +11,7 @@ def app():
     ctx.pop()
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope='function')
 def client(app):
     yield app.test_client()
 

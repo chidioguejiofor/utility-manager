@@ -8,8 +8,6 @@ from api.utils.constants import LOGIN_TOKEN
 
 
 class BaseView(Resource):
-    protected_methods = []
-
     def decode_token(self):
         """Decoded a token and returns the decoded data
 
@@ -20,20 +18,14 @@ class BaseView(Resource):
         Returns:
             dict, str: The decoded token data
         """
-        import logging
-        if request.method not in self.protected_methods:
-            return
-
         token = request.cookies.get('token')
-        logging.info('Retrieving token')
-        logging.info(token)
         if not token:
             raise MessageOnlyResponseException(
                 authentication_errors['missing_token'],
                 401,
             )
 
-        return TokenValidator.decode_token(token, token_type=LOGIN_TOKEN)
+        return TokenValidator.decode_token_data(token, token_type=LOGIN_TOKEN)
 
 
 class CookieGeneratorMixin:

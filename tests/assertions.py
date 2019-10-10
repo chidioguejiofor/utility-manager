@@ -1,6 +1,8 @@
 import json
-
+import re
+from api.utils.token_validator import TokenValidator
 from api.utils.error_messages import authentication_errors
+from api.utils.constants import CONFIRM_TOKEN
 
 
 def assert_send_grid_mock_send(mock_send, receivers, *, num_of_calls=1):
@@ -12,6 +14,26 @@ def assert_send_grid_mock_send(mock_send, receivers, *, num_of_calls=1):
     personalization = mail_obj.personalizations[0]
     emails = [person['email'] for person in personalization.tos]
     assert emails == receivers
+    return mail_obj.contents[0].content
+
+
+def assert_reg_confirm_email_was_sent_properly(html_content, redirect_url,
+                                               user):
+    # Extracting token from HTML content
+    token_pattern = r"\/e.+\.e.+\..+\""
+    token = re.findall(token_pattern, html_content)[0][1:-1]
+    decoded = TokenValidator.decode_token(token, CONFIRM_TOKEN)
+    decoded_data = decoded['data']
+
+    confirm_email_endpoint = 'api/auth/confirm/{}'
+    # Validating token
+    assert confirm_email_endpoint.format(token) in html_content
+    assert decoded_data['email'] == user.email
+    assert decoded_data['type'] == CONFIRM_TOKEN
+    assert decoded_data['id'] == user.id
+    assert decoded_data['redirect_url'] == redirect_url
+    # checks that the expiry time of the token is 15 minutes
+    assert decoded['exp'] - decoded['iat'] == 15 * 60
 
 
 def assert_successful_response(response, message, status_code=200):

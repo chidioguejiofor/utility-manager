@@ -1,10 +1,10 @@
 from marshmallow import fields
 from marshmallow_enum import EnumField
-from .base import AbstractSchemaWithTimeStamps, StringField, AlphanumericField, BaseSchema
+from .base import AbstractSchemaWithTimeStampsMixin, StringField, AlphanumericField, BaseSchema
 from ..models import Organisation as OrganisationModel, SubscriptionEnum, RoleEnum
 
 
-class Organisation(AbstractSchemaWithTimeStamps):
+class Organisation(AbstractSchemaWithTimeStampsMixin, BaseSchema):
     __model__ = OrganisationModel
     name = AlphanumericField(min_length=2, max_length=120, allow_spaces=True)
     website = StringField()

@@ -38,7 +38,7 @@ Subsequently, if a new model is created or while rebasing data run the following
 In order to start the app locally, run `flask run`. 
 
 ## Documentation
-You can all the endpoints in the postman documentation  here [![Open Docs](https://run.pstmn.io/button.svg)](link-to-docs.com)
+You can all the endpoints in the postman documentation  here [![Open Docs](https://run.pstmn.io/button.svg)](https://idonthaveone.postman.co/collections/4208573-b19f1723-afe4-4752-b51c-0ea93cf6b495/publish?workspace=2a395d64-1d2c-41cc-ab03-6014fdfd989f)
 
 ## Redis and Celery
 Celery is used as the message broker for the API. We use it to run heavy task(via celery-workers) and run cron-jobs(via celery-beat).

@@ -1,7 +1,5 @@
-import os
 import jwt
 
-import logging
 from .base import BaseView, CookieGeneratorMixin
 from settings import endpoint
 from flask import request, redirect
@@ -13,7 +11,7 @@ from api.utils.token_validator import TokenValidator
 from api.models import User
 from api.schemas import UserSchema
 from api.utils.success_messages import CREATED, LOGIN
-from api.utils.constants import LOGIN_TOKEN, CONFIRM_TOKEN, CONFIRM_EMAIL_SUBJECT
+from api.utils.constants import CONFIRM_TOKEN
 
 
 @endpoint('/auth/register')
@@ -29,12 +27,9 @@ class Register(BaseView, CookieGeneratorMixin):
 
 @endpoint('/auth/resend-email')
 class ResendEmail(BaseView):
-    protected_methods = ['POST']
-
     def post(self):
         from api.utils.emails import EmailUtil
         user_data = self.decode_token()
-        request.cookies.get('token')
         redirect_url = request.get_json().get('redirectURL')
         if not redirect_url or not ('http://' in redirect_url
                                     or 'https://' in redirect_url):
@@ -50,7 +45,7 @@ class ResendEmail(BaseView):
                 status_code=400,
             )
 
-        EmailUtil.send_confirmation_email(user)
+        EmailUtil.send_verification_email_to_user(user)
 
         return {
             'status': 'success',
@@ -63,16 +58,16 @@ class ConfirmEmail(BaseView):
     @staticmethod
     def get(**kwargs):
         try:
-            token_data = TokenValidator.decode_token(kwargs.get('token'),
-                                                     CONFIRM_TOKEN)
+            token_data = TokenValidator.decode_token_data(
+                kwargs.get('token'), CONFIRM_TOKEN)
             user = User.query.get(token_data['id'])
             user.verified = True
             User.update()
             redirect_url = f"{token_data['redirect_url']}?success=true&message={REG_VERIFIED}"
         except jwt.exceptions.ExpiredSignatureError:
-            token_data = TokenValidator.decode_token(kwargs.get('token'),
-                                                     CONFIRM_TOKEN,
-                                                     verify=False)
+            token_data = TokenValidator.decode_token_data(kwargs.get('token'),
+                                                          CONFIRM_TOKEN,
+                                                          verify=False)
             message = authentication_errors['confirmation_expired']
             redirect_url = f"{token_data['redirect_url']}?success=false&message={message}"
         except Exception:

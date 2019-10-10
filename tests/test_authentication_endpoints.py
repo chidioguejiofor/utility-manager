@@ -1,11 +1,15 @@
 from unittest.mock import Mock, patch
+from .mocks import fake
+import re
+from api.utils.token_validator import TokenValidator
 from .assertions import (assert_send_grid_mock_send,
                          assert_successful_response,
                          assert_when_token_is_missing,
-                         assert_when_token_is_invalid)
-from api.utils.success_messages import CREATED, LOGIN, CONFIRM_EMAIL_RESENT, REG_VERIFIED
+                         assert_when_token_is_invalid,
+                         assert_reg_confirm_email_was_sent_properly)
+from api.utils.success_messages import CREATED, LOGIN, CONFIRM_EMAIL_RESENT, REG_VERIFIED, RESET_PASS_MAIL, PASSWORD_CHANGED
 from api.utils.error_messages import serialization_error, authentication_errors
-from api.utils.constants import CONFIRM_TOKEN
+from api.utils.constants import CONFIRM_TOKEN, RESET_TOKEN
 from api.models import User
 from .mocks.user import UserGenerator
 import time
@@ -15,6 +19,8 @@ REGISTER_URL = '/api/auth/register'
 LOGIN_URL = '/api/auth/login'
 RESEND_EMAIL_ENDPOINT = 'api/auth/resend-email'
 CONFIRM_EMAIL_ENDPOINT = 'api/auth/confirm/{}'
+RESET_PASSWORD_ENDPOINT = 'api/auth/reset'
+CONFIRM_RESET_PASSWORD_ENDPOINT = 'api/auth/reset/confirm'
 
 
 class TestLoginEndpoint:
@@ -102,7 +108,6 @@ class TestLinkClickedFromUserEmail:
         token = UserGenerator.generate_token(user,
                                              token_type=CONFIRM_TOKEN,
                                              seconds=-1)
-        time.sleep(0.1)
         response = client.get(CONFIRM_EMAIL_ENDPOINT.format(token),
                               content_type="application/json")
 
@@ -149,7 +154,10 @@ class TestResendEmail:
 
         assert_successful_response(response,
                                    CONFIRM_EMAIL_RESENT.format(user.email))
-        assert_send_grid_mock_send(mock_send, user.email)
+        html_content = assert_send_grid_mock_send(mock_send, user.email)
+
+        assert_reg_confirm_email_was_sent_properly(html_content, redirect_url,
+                                                   user)
 
     def test_when_redirect_email_is_invalid_should_fail(
             self, mock_send, init_db, client):
@@ -201,6 +209,167 @@ class TestResendEmail:
         assert_when_token_is_invalid(response)
 
 
+class TestConfirmResetPassword:
+    def test_user_should_be_able_to_reset_their_password_once_reset_token_is_provided(
+            self, init_db, client):
+        user = UserGenerator.generate_model_obj(save=True)
+        token = UserGenerator.generate_token(user, token_type=RESET_TOKEN)
+        new_password = 'some-very-new-password'
+        valid_data = json.dumps({
+            'password': new_password,
+        })
+        response = client.patch(CONFIRM_RESET_PASSWORD_ENDPOINT,
+                                data=valid_data,
+                                content_type="application/json",
+                                headers={'Authorization': f'Bearer {token}'})
+        response_body = json.loads(response.data)
+        user = User.query.get(user.id)
+        assert user.verify_password(new_password)
+        assert response.status_code == 200
+        assert response_body['message'] == PASSWORD_CHANGED
+
+    def test_error_message_should_be_sent_when_password_is_not_provided(
+            self, init_db, client):
+        user = UserGenerator.generate_model_obj(save=True)
+        token = UserGenerator.generate_token(user, token_type=RESET_TOKEN)
+        valid_data = json.dumps({})
+        response = client.patch(CONFIRM_RESET_PASSWORD_ENDPOINT,
+                                data=valid_data,
+                                content_type="application/json",
+                                headers={'Authorization': f'Bearer {token}'})
+        response_body = json.loads(response.data)
+        assert response.status_code == 400
+        assert response_body['message'] == serialization_error[
+            'pass_is_required']
+
+    def test_should_fail_with_appropriate_message_when_token_is_invalid(
+            self, init_db, client):
+        user = UserGenerator.generate_model_obj(save=True)
+        token = UserGenerator.generate_token(user, token_type=RESET_TOKEN)
+        new_password = 'some-very-new-password'
+        valid_data = json.dumps({
+            'password': new_password,
+        })
+        response = client.patch(CONFIRM_RESET_PASSWORD_ENDPOINT,
+                                data=valid_data,
+                                content_type="application/json",
+                                headers={'Authorization': f'{token}'})
+        response_body = json.loads(response.data)
+        assert response.status_code == 401
+        assert response_body['message'] == authentication_errors[
+            'token_invalid']
+
+    def test_should_fail_with_appropriate_message_when_header_is_invalid(
+            self, init_db, client):
+        user = UserGenerator.generate_model_obj(save=True)
+        token = UserGenerator.generate_token(user, token_type=RESET_TOKEN)
+        new_password = 'some-very-new-password'
+        valid_data = json.dumps({
+            'password': new_password,
+        })
+        response = client.patch(CONFIRM_RESET_PASSWORD_ENDPOINT,
+                                data=valid_data,
+                                content_type="application/json",
+                                headers={'Authorization': f'jfwiofn {token}'})
+        response_body = json.loads(response.data)
+        assert response.status_code == 401
+        assert response_body['message'] == authentication_errors[
+            'invalid_auth_header']
+
+    def test_should_fail_when_token_is_expired(self, init_db, client):
+        user = UserGenerator.generate_model_obj(save=True)
+        token = UserGenerator.generate_token(user,
+                                             token_type=RESET_TOKEN,
+                                             seconds=-1)
+        new_password = 'some-very-new-password'
+        valid_data = json.dumps({
+            'password': new_password,
+        })
+        response = client.patch(CONFIRM_RESET_PASSWORD_ENDPOINT,
+                                data=valid_data,
+                                content_type="application/json",
+                                headers={'Authorization': f'Bearer {token}'})
+        response_body = json.loads(response.data)
+        assert response.status_code == 401
+        assert response_body['message'] == authentication_errors[
+            'token_expired']
+
+
+@patch('api.utils.emails.EmailUtil.SEND_CLIENT.send', autospec=True)
+class TestResetPassword:
+    def test_user_should_be_able_to_make_reset_request_when_account_exists(
+            self, mock_send, init_db, client):
+        from api.utils.emails import EmailUtil
+        EmailUtil.send_mail_as_html.delay = Mock(
+            side_effect=EmailUtil.send_mail_as_html)
+        user = UserGenerator.generate_model_obj(save=True)
+        redirect_url = fake.url()
+        valid_data = json.dumps({
+            'email': user.email,
+            'redirectURL': redirect_url,
+        })
+        response = client.patch(RESET_PASSWORD_ENDPOINT,
+                                data=valid_data,
+                                content_type="application/json")
+
+        assert EmailUtil.send_mail_as_html.delay.called
+        html_to_check_for = '<h1>Reset Account</h1>'
+        assert_successful_response(response,
+                                   RESET_PASS_MAIL.format(user.email))
+        html_content = assert_send_grid_mock_send(mock_send, user.email)
+
+        # Extracting token from HTML content
+        token_pattern = r"\/e.+\.e.+\..+\""
+        token = re.findall(token_pattern, html_content)[0][1:-1]
+        decoded = TokenValidator.decode_token(token, RESET_TOKEN)
+        decoded_data = decoded['data']
+
+        # Validating token
+        assert html_to_check_for in html_content
+        assert f'{redirect_url}/{token}' in html_content
+        assert decoded_data['email'] == user.email
+        assert decoded_data['type'] == RESET_TOKEN
+        assert decoded_data['id'] == user.id
+
+        # checks that the expiry time is 15 minutes
+        assert decoded['exp'] - decoded['iat'] == 15 * 60
+
+    def test_should_return_appropriate_error_when_email_is_not_found(
+            self, mock_send, init_db, client):
+        invalid_data = json.dumps({
+            'email': 'some-random-email@email.com',
+            'redirectURL': fake.url(),
+        })
+        response = client.patch(RESET_PASSWORD_ENDPOINT,
+                                data=invalid_data,
+                                content_type="application/json")
+
+        response_body = json.loads(response.data)
+        assert response.status_code == 404
+        assert response_body['message'] == serialization_error[
+            'email_not_found']
+        assert response_body['status'] == 'error'
+        assert not mock_send.called
+
+    def test_should_fail_when_redirect_url_is_not_provieded(
+            self, mock_send, init_db, client):
+        user = UserGenerator.generate_model_obj(save=True)
+        invalid_data = json.dumps({
+            'email': user.email,
+        })
+        response = client.patch(RESET_PASSWORD_ENDPOINT,
+                                data=invalid_data,
+                                content_type="application/json")
+
+        response_body = json.loads(response.data)
+        assert response.status_code == 400
+        assert response_body['message'] == serialization_error[
+            'invalid_field_data']
+        assert 'redirectURL' in response_body['errors']
+        assert response_body['status'] == 'error'
+        assert not mock_send.called
+
+
 @patch('api.utils.emails.EmailUtil.SEND_CLIENT.send', autospec=True)
 class TestRegisterEndpoint:
     def test_new_user_should_register_successfully_when_valid_data_is_provided_and_should_be_added_to_the_db(
@@ -208,9 +377,9 @@ class TestRegisterEndpoint:
         from api.utils.emails import EmailUtil
         EmailUtil.send_mail_as_html.delay = Mock(
             side_effect=EmailUtil.send_mail_as_html)
-        valid_user_json = UserGenerator.generate_api_input_json_data()
+        valid_user_dict = UserGenerator.generate_api_input_data()
         response = client.post(REGISTER_URL,
-                               data=valid_user_json,
+                               data=json.dumps(valid_user_dict),
                                content_type="application/json")
         response_body = json.loads(response.data)
         response_data = response_body['data']
@@ -221,7 +390,9 @@ class TestRegisterEndpoint:
         assert user.last_name == response_data['lastName']
         assert response_body['status'] == 'success'
         assert response_body['message'] == CREATED.format('user')
-        assert_send_grid_mock_send(mock_send, user.email)
+        html_content = assert_send_grid_mock_send(mock_send, user.email)
+        assert_reg_confirm_email_was_sent_properly(
+            html_content, valid_user_dict['redirectURL'], user)
 
     def test_attempt_to_register_user_with_invalid_data_should_fail(
             self, init_db, client):

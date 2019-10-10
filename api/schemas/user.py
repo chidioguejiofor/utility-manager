@@ -1,11 +1,18 @@
-from .base import AbstractSchemaWithTimeStamps, StringField, AlphaOnlyField, BaseSchema, AlphanumericField
+from .base import AbstractSchemaWithTimeStampsMixin, StringField, AlphaOnlyField, BaseSchema, AlphanumericField
 from ..models import User as UserModel, RoleEnum
 from marshmallow import fields
 from marshmallow_enum import EnumField
-from marshmallow import Schema, post_load, pre_load
 
 
-class User(AbstractSchemaWithTimeStamps):
+class ResetPasswordSchema(BaseSchema):
+    __model__ = UserModel
+    email = fields.Email(required=True)
+    redirect_url = fields.URL(data_key='redirectURL',
+                              load_only=True,
+                              required=True)
+
+
+class User(AbstractSchemaWithTimeStampsMixin, ResetPasswordSchema):
     __model__ = UserModel
     username = AlphanumericField(data_key="username",
                                  min_length=1,
@@ -20,11 +27,7 @@ class User(AbstractSchemaWithTimeStamps):
                                max_length=20,
                                required=True)
     password = StringField(load_only=True, required=True)
-    email = fields.Email(required=True)
     verified = fields.Boolean()
-    redirect_url = fields.URL(data_key='redirectURL',
-                              load_only=True,
-                              required=True)
 
 
 class _MembershipSchema(BaseSchema):

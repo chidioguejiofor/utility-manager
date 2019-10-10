@@ -43,18 +43,39 @@ class EmailUtil:
         return 'Success'
 
     @classmethod
-    def send_confirmation_email(cls, user):
+    def send_verification_email_to_user(
+            cls,
+            user,
+            token_type=CONFIRM_TOKEN,
+            template_name='confirm-email',
+            link_url=f'{request.host_url}api/auth/confirm',
+            subject=CONFIRM_EMAIL_SUBJECT,
+    ):
+        """
 
-        token = TokenValidator.create_token({
-            'type': CONFIRM_TOKEN,
-            'id': user.id,
-            'email': user.email,
-            'redirect_url': user.redirect_url
-        })
-        confirm_link = f'{request.host_url}api/auth/confirm/{token}'
-        html = cls.extract_html_from_template('confirm-email',
-                                              confirm_link=confirm_link)
-        cls.send_mail_as_html.delay(CONFIRM_EMAIL_SUBJECT, user.email, html)
+        Args:
+            user(api.utils.models.User):  A user model
+            token_type (int): The token type that is to be sent.
+            template_name: The name of the HTML file that would be used to send the mail
+            link_url:The GET url that would be called when the user clicks on the link
+            subject(str): Here you specify the subject of the email
+
+        Returns:
+
+        """
+
+        token = TokenValidator.create_token(
+            {
+                'type': token_type,
+                'id': user.id,
+                'email': user.email,
+                'redirect_url': user.redirect_url
+            },
+            minutes=15)
+        link_url = f'{link_url}/{token}'
+        html = cls.extract_html_from_template(template_name,
+                                              confirm_link=link_url)
+        cls.send_mail_as_html.delay(subject, user.email, html)
 
     @staticmethod
     def extract_html_from_template(template_name, **kwargs):
@@ -77,5 +98,4 @@ class EmailUtil:
 
             for key, value in kwargs.items():
                 text = text.replace("{{" + key + '}}', value)
-            print(text)
             return text

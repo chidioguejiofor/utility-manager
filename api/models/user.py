@@ -44,4 +44,4 @@ class User(BaseModel):
 def send_verification_email(mapper, connection, target):
     from api.utils.emails import EmailUtil
     if target.redirect_url:
-        EmailUtil.send_confirmation_email(target)
+        EmailUtil.send_verification_email_to_user(target)

@@ -14,9 +14,8 @@ class BaseSchema(Schema):
         dump_data = {
             'status': 'success',
             'data': self.dump(model_obj),
+            'message': message
         }
-        if message:
-            dump_data['message'] = message
         return dump_data
 
 

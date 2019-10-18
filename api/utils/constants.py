@@ -1,5 +1,5 @@
 """Add constants used in the app to this file"""
-CELERY_TASKS = ['api.utils.emails']
+CELERY_TASKS = ['api.services.file_uploader', 'api.utils.emails']
 APP_EMAIL = 'utility-manager@email.com'
 CONFIRM_EMAIL_SUBJECT = 'Complete Registration'
 RESET_PASSWORD_SUBJECT = 'Reset Password'

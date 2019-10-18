@@ -23,6 +23,23 @@ RESET_PASSWORD_ENDPOINT = 'api/auth/reset'
 CONFIRM_RESET_PASSWORD_ENDPOINT = 'api/auth/reset/confirm'
 
 
+class TestLogoutEndpoint:
+    def test_should_logout_user_successfully(self, init_db, client):
+        redirect_url = UserGenerator.generate_api_input_data()['redirectURL']
+
+        user = UserGenerator.generate_model_obj(save=True)
+        user.redirect_url = redirect_url
+        user.update()
+        token = UserGenerator.generate_token(user, token_type=CONFIRM_TOKEN)
+        client.set_cookie('/', 'token', token)
+        response = client.delete(LOGIN_URL)
+
+        cookie = response.headers.get('Set-Cookie')
+        assert response.status_code == 200
+        assert 'expires=Thu, 01 Jan 1970 00:00:00 GMT' in cookie
+        assert 'token=deleted' in cookie
+
+
 class TestLoginEndpoint:
     def test_user_should_be_logged_in_once_correct_email_and_password_is_provided(
             self, init_db, client):

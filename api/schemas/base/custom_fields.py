@@ -1,6 +1,7 @@
 import re
 from marshmallow import fields, ValidationError
 from api.utils.error_messages import serialization_error
+from werkzeug.datastructures import FileStorage
 
 
 class FieldValidator:
@@ -99,5 +100,23 @@ class AlphaOnlyField(StringField):
             if not data.strip().isalpha():
                 raise ValidationError(
                     message=serialization_error['alpha_only'])
+
+        return [_validator]
+
+
+class ImageField(fields.Raw):
+    def __init__(self, *args, **kwargs):
+        validations = kwargs.get('validate', [])
+        validator = self._get_image_validator()
+        validations = validations + validator
+        super().__init__(*args, validate=validations, **kwargs)
+
+    @staticmethod
+    def _get_image_validator():
+        def _validator(data):
+            if not (isinstance(data, FileStorage)
+                    and 'image/' in data.mimetype):
+                raise ValidationError(
+                    message=serialization_error['invalid_image'])
 
         return [_validator]

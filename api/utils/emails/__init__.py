@@ -5,7 +5,6 @@ from sendgrid.helpers.mail import Mail
 import os
 import codecs
 import logging
-from flask import request
 from api.utils.token_validator import TokenValidator
 from api.utils.constants import CONFIRM_TOKEN, CONFIRM_EMAIL_SUBJECT
 
@@ -32,11 +31,7 @@ class EmailUtil:
                        subject=subject,
                        html_content=html)
         try:
-
-            response = EmailUtil.SEND_CLIENT.send(message)
-            print(response.status_code)
-            print(response.body)
-            print(response.headers)
+            EmailUtil.SEND_CLIENT.send(message)
         except Exception as e:
             logging.exception(e)
             return 'Failure'
@@ -48,7 +43,7 @@ class EmailUtil:
             user,
             token_type=CONFIRM_TOKEN,
             template_name='confirm-email',
-            link_url=f'{request.host_url}api/auth/confirm',
+            link_url=None,
             subject=CONFIRM_EMAIL_SUBJECT,
     ):
         """
@@ -63,6 +58,8 @@ class EmailUtil:
         Returns:
 
         """
+        from flask import request
+        link_url = f'{request.host_url}api/auth/confirm' if link_url is None else link_url
 
         token = TokenValidator.create_token(
             {

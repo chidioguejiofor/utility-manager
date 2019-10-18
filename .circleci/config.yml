@@ -38,8 +38,9 @@ save_cache: &save_cache # cache Python dependencies using checksum of Pipfile as
       - "/usr/local/bin"
 
 run_tests: &run_tests
+  name: Run tests
   command: |
-    pipenv run pytest
+    mkdir -p dumped_files && pipenv run pytest
 
 setup_codeclimate: &setup_codeclimate
 
@@ -52,7 +53,7 @@ generate_coverage_report: &generate_coverage_report
   name: contains code coverage report
   command: |
     ./cc-test-reporter before-build
-    pipenv run pytest --cov=api --cov-report xml --cov-branch
+    mkdir -p dumped_files && pipenv run pytest --cov=api --cov-report xml --cov-branch
     ./cc-test-reporter after-build
 
 

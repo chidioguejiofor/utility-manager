@@ -1,7 +1,4 @@
 from sqlalchemy import event
-from flask import request
-from api.utils.token_validator import TokenValidator
-from api.utils.constants import CONFIRM_TOKEN, CONFIRM_EMAIL_SUBJECT
 from settings import db
 from passlib.hash import pbkdf2_sha512
 from .base import BaseModel
@@ -22,6 +19,8 @@ class User(BaseModel):
     memberships = db.relationship('Membership',
                                   back_populates='member',
                                   lazy=True)
+    owned_organisations = db.relationship('Organisation',
+                                          back_populates='creator')
     organisations = None
     redirect_url = None
     __unique_constraints__ = (('email', 'user_email_unique_constraint'),

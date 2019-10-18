@@ -65,17 +65,15 @@ class TestUserSerializer:
 
     def test_user_membership_serializers_should_be_able_to_get_organisations_of_a_user(
             self, init_db):
-        org_one = OrganisationGenerator.generate_model_obj(save=True)
-        org_two = OrganisationGenerator.generate_model_obj(save=True)
         valid_user_obj = UserGenerator.generate_model_obj(save=True)
-        Membership(organisation=org_one, member=valid_user_obj).save()
-        Membership(organisation=org_two, member=valid_user_obj).save()
+        OrganisationGenerator.generate_model_obj(valid_user_obj.id, save=True)
+        OrganisationGenerator.generate_model_obj(valid_user_obj.id, save=True)
 
         dumped_data = UserMembershipSchema().dump(valid_user_obj)
         assert len(dumped_data['memberships']) == 2
         assert dumped_data['firstName'] == valid_user_obj.first_name
         assert dumped_data['lastName'] == valid_user_obj.last_name
-        assert dumped_data['memberships'][0]['role'] == 'REGULAR_USER'
+        assert dumped_data['memberships'][0]['role'] == 'OWNER'
 
 
 class TestUserModel:
@@ -113,10 +111,11 @@ class TestUserModel:
             self,
             init_db,
     ):
-        org = OrganisationGenerator.generate_model_obj(save=True)
         valid_user_obj = UserGenerator.generate_model_obj(save=True)
-        membership = Membership(organisation=org, member=valid_user_obj)
-        membership.save()
+        org = OrganisationGenerator.generate_model_obj(valid_user_obj.id,
+                                                       save=True)
+        membership = Membership.query.filter_by(organisation=org,
+                                                member=valid_user_obj).first()
 
         user = User.query.filter(User.id == valid_user_obj.id).first()
         user_org = Membership.query.filter((Membership.user_id == user.id) & (
@@ -125,4 +124,4 @@ class TestUserModel:
         assert user_org.name == org.name
         assert user_org.website == org.website
         assert user_org.display_name == org.display_name
-        assert membership.role == RoleEnum.REGULAR_USER
+        assert membership.role == RoleEnum.OWNER

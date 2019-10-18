@@ -9,3 +9,5 @@ __pycache__/*
 docker-junk
 htmlcov
 **/*.pyc
+dumped_files/
+

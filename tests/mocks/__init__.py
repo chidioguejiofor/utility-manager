@@ -7,8 +7,9 @@ class BaseGenerator:
     __model__ = None
 
     @classmethod
-    def generate_model_obj(cls, save=False):
-        model_instance = cls.__model__(**cls.generate_model_obj_dict())
+    def generate_model_obj(cls, *args, save=False, **kwargs):
+        model_instance = cls.__model__(
+            **cls.generate_model_obj_dict(*args, **kwargs))
         if save:
             model_instance.save()
         return model_instance

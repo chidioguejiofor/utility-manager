@@ -24,6 +24,7 @@ marshmallow = "*"
 marshmallow-enum = "*"
 passlib = "*"
 faker = "*"
+pytest-env = "*"
 
 [dev-packages]
 yapf = "*"

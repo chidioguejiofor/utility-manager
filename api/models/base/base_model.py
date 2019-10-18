@@ -28,14 +28,29 @@ class BaseModel(db.Model):
     created_at = db.Column(db.DateTime(timezone=True), default=TimeUtil.now)
     updated_at = db.Column(db.DateTime(timezone=True), nullable=True)
 
-    def save(self):
+    def save(self, commit=True):
+        """Saves a new model to the session
+
+        If commit is True it updates the database with new changes else it saves it just
+        adds the this model to the session
+
+        When commit is True and an exception occurs, an attempt is made to rollback the current session
+        is done before re-raising the exception
+
+        Args:
+            commit(bool, optional): If True upates database with model
+
+        Raise:
+            sqlalchemy.exc.SQLAlchemyError: when any database error occurs
+        """
         self._valid_unique_constraints(self)
         db.session.add(self)
-        try:
-            db.session.commit()
-        except Exception as e:
-            db.session.rollback()
-            raise e
+        if commit:
+            try:
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                raise e
 
     @classmethod
     def _valid_unique_constraints(cls, obj):

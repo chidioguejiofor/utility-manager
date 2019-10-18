@@ -4,6 +4,7 @@ from sqlalchemy import event
 from api.utils.time_util import TimeUtil
 from api.utils.error_messages import serialization_error, authentication_errors
 from api.utils.exceptions import UniqueConstraintException, MessageOnlyResponseException
+from api.utils.constants import CELERY_TASKS
 import os
 from flask import Blueprint
 from flask_sqlalchemy import SQLAlchemy
@@ -12,7 +13,10 @@ from marshmallow.exceptions import ValidationError
 from flask_cors import CORS
 import dotenv
 import logging
+from celery import Celery
 from jwt.exceptions import PyJWTError, ExpiredSignature
+import werkzeug.exceptions
+import cloudinary
 
 db = SQLAlchemy()
 dotenv.load_dotenv()
@@ -20,6 +24,15 @@ api_blueprint = Blueprint('api_bp', __name__, url_prefix='/api')
 bp = Blueprint('errors', __name__)
 router = Api(api_blueprint)
 endpoint = router.route
+
+cloudinary.config(cloud_name=os.getenv('CLOUDINARY_NAME'),
+                  api_key=os.getenv('CLOUDINARY_API_KEY'),
+                  api_secret=os.getenv('CLOUDINARY_SECRET'))
+
+REDIS_SERVER_URL = os.getenv('REDIS_SERVER_URL', 'redis://localhost')
+celery_app = Celery(__name__, broker=REDIS_SERVER_URL, include=CELERY_TASKS)
+celery_scheduler = Celery(__name__, broker=REDIS_SERVER_URL)
+celery_scheduler.conf.enable_utc = False
 
 
 class BaseConfig:
@@ -90,7 +103,6 @@ def create_error_handlers(app):
 
     @app.errorhandler(PyJWTError)
     def handle_errors(error):
-        print(error.__dict__)
         if isinstance(error, ExpiredSignature):
             return {
                 'status': 'error',
@@ -106,8 +118,13 @@ def create_error_handlers(app):
     def handle_unique_errors(error):
         return {'status': 'error', 'message': error.message}, 409
 
+    @app.errorhandler(werkzeug.exceptions.NotFound)
+    def handle_resource_not_found(error):
+        logging.exception(error)
+        return {'status': 'error', 'message': 'Resource was not found'}, 404
+
     @app.errorhandler(Exception)
-    def handle_unique_errors(error):
+    def handle_any_other_errors(error):
         logging.exception(error)
         return {'status': 'error', 'message': 'Unknown Error'}, 500
 
@@ -131,5 +148,8 @@ def create_app(current_env=os.getenv('FLASK_ENV', 'production')):
     add_id_event_to_models(tables_in_my_app)
 
     create_error_handlers(app)
+    celery_app.config_from_object(app.config)
+    celery_scheduler.config_from_object(app.config)
+    # celery_scheduler.conf.update(app.config)
 
     return app

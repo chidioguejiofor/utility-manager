@@ -1,7 +1,6 @@
 from .base import AbstractSchemaWithTimeStampsMixin, StringField, AlphaOnlyField, BaseSchema, AlphanumericField
-from ..models import User as UserModel, RoleEnum
+from ..models import User as UserModel
 from marshmallow import fields
-from marshmallow_enum import EnumField
 
 
 class ResetPasswordSchema(BaseSchema):
@@ -28,13 +27,3 @@ class User(AbstractSchemaWithTimeStampsMixin, ResetPasswordSchema):
                                required=True)
     password = StringField(load_only=True, required=True)
     verified = fields.Boolean()
-
-
-class _MembershipSchema(BaseSchema):
-    from .organisation import Organisation as OrganisationSchema
-    organisation = fields.Nested(OrganisationSchema)
-    role = EnumField(enum=RoleEnum, by_value=False)
-
-
-class UserWithMembership(User):
-    memberships = fields.Nested(_MembershipSchema, many=True)

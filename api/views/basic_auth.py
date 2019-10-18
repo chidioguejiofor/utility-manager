@@ -1,5 +1,4 @@
 import jwt
-
 from .base import BaseView, CookieGeneratorMixin
 from settings import endpoint
 from flask import request, redirect
@@ -100,3 +99,11 @@ class Login(BaseView, CookieGeneratorMixin):
             message=serialization_error['login_failed'],
             status_code=400,
         )
+
+    def delete(self):
+        headers = self.generate_cookie_header(expired=True)
+        data = {
+            'status': 'success',
+            'data': 'User was logged out successfully'
+        }
+        return data, 200, headers

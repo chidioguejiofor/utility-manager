@@ -100,7 +100,7 @@ class TestOrganisationModel:
         with pytest.raises(UniqueConstraintException) as e:
             assert Organisation(**valid_dict).save()
         assert e.value.message == serialization_error['already_exists'].format(
-            'website')
+            '`website`')
 
     def test_load_memberships_for_organisation_succeeds(self, init_db):
         valid_user_obj = UserGenerator.generate_model_obj(save=True)

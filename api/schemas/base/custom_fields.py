@@ -38,6 +38,10 @@ class FieldValidator:
 
 
 class StringField(FieldValidator, fields.String):
+    def __init__(self, *args, capitalize=False, **kwargs):
+        self.capitalize = capitalize
+        super().__init__(*args, **kwargs)
+
     def _deserialize(self, value, attr, data, **kwargs):
         """This method is called when data is being loaded to python
 
@@ -56,7 +60,8 @@ b
         """
         des_value = super()._deserialize(value, attr, data, **kwargs)
 
-        return re.sub("\\s{2,}", " ", des_value.strip())
+        des_value = re.sub("\\s{2,}", " ", des_value.strip())
+        return des_value.capitalize() if self.capitalize else des_value
 
 
 class RegexField(StringField):

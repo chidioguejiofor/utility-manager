@@ -3,6 +3,7 @@ from api.utils.time_util import TimeUtil
 from api.utils.error_messages import serialization_error
 from api.utils.exceptions import UniqueConstraintException
 from sqlalchemy.ext.declarative import declared_attr, as_declarative
+import numpy as np
 
 
 class BaseModel(db.Model):
@@ -17,8 +18,12 @@ class BaseModel(db.Model):
     def __table_args__(cls):
         final_list = []
         for column, constraint_name in cls.__unique_constraints__:
-            final_list.append(db.UniqueConstraint(column,
-                                                  name=constraint_name))
+            if isinstance(column, tuple):
+                final_list.append(
+                    db.UniqueConstraint(*column, name=constraint_name))
+            else:
+                final_list.append(
+                    db.UniqueConstraint(column, name=constraint_name))
         return tuple(final_list)
 
     id = db.Column(
@@ -53,16 +58,26 @@ class BaseModel(db.Model):
                 raise e
 
     @classmethod
+    def _compare_column(cls, obj, constraint_col):
+        return getattr(cls, constraint_col) == getattr(obj, constraint_col)
+
+    @classmethod
     def _valid_unique_constraints(cls, obj):
         filter_query = None
         cols = []
-        for unique_column, _ in cls.__unique_constraints__:
-            test = getattr(cls, unique_column) == getattr(obj, unique_column)
+        for constraint_col, _ in cls.__unique_constraints__:
+            if isinstance(constraint_col, tuple):
+                test = np.bitwise_and.reduce(
+                    [cls._compare_column(obj, col) for col in constraint_col])
+                col_msg = f"`{' and '.join(constraint_col)}`"
+            else:
+                test = cls._compare_column(obj, constraint_col)
+                col_msg = f"`{constraint_col}`"
             if filter_query is None:
                 filter_query = test
             else:
                 filter_query = filter_query | test
-            cols.append(unique_column)
+            cols.append(col_msg)
 
         if cls.query.filter(filter_query).count() >= 1:
             cols = ' or '.join(cols)

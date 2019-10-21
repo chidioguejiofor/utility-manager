@@ -494,4 +494,4 @@ class TestRegisterEndpoint:
         assert 'data' not in response_body
         assert response_body['status'] == 'error'
         assert response_body['message'] == serialization_error[
-            'already_exists'].format('email or username')
+            'already_exists'].format('`email` or `username`')

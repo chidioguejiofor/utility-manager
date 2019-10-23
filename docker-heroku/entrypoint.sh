@@ -14,4 +14,4 @@ echo "<<< Waiting for the celery_config-workers to flow with the beat >>> "
 sleep 6
 echo "Starting server >>> "
 
-exec flask run -h  0.0.0.0 -p $PORT
+exec gunicorn --bind 0.0.0.0:$PORT -w 2 wsgi:app

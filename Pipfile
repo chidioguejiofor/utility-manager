@@ -25,6 +25,7 @@ marshmallow-enum = "*"
 passlib = "*"
 faker = "*"
 pytest-env = "*"
+gunicorn = "*"
 
 [dev-packages]
 yapf = "*"

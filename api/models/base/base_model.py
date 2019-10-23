@@ -4,6 +4,7 @@ from api.utils.error_messages import serialization_error
 from api.utils.exceptions import UniqueConstraintException
 from sqlalchemy.ext.declarative import declared_attr, as_declarative
 import numpy as np
+from .id_generator import IDGenerator
 
 
 class BaseModel(db.Model):
@@ -103,3 +104,18 @@ class BaseModel(db.Model):
 
         """
         return query.update(kwargs)
+
+    @classmethod
+    def bulk_create(cls, list_of_dicts):
+        """Inserts bulk data into the database using a list_of_dicts
+        
+        Args:
+            list_of_dicts: Inserts multiple instances of this model into the data in bulk
+
+        Returns:
+            None: Inserts the data and returns nothing
+        """
+        db.session.bulk_save_objects([
+            cls(**data, id=IDGenerator.generate_id()) for data in list_of_dicts
+        ])
+        db.session.commit()

@@ -55,3 +55,20 @@ def assert_when_token_is_invalid(response):
     assert response.status_code == 401
     assert response_body['message'] == authentication_errors['token_invalid']
     assert response_body['status'] == 'error'
+
+
+def assert_paginator_meta(response_body, **kwargs):
+    assert response_body['meta']['currentPage'] == kwargs['current_page']
+    assert response_body['meta']['totalObjects'] == kwargs['total_objects']
+    assert response_body['meta']['objectsPerPage'] == kwargs[
+        'objects_per_page']
+    assert response_body['meta']['totalPages'] == kwargs['total_pages']
+    assert response_body['meta']['nextPage'] == kwargs['next_page']
+    assert response_body['meta']['previousPage'] == kwargs['prev_page']
+    if kwargs['current_page'] > kwargs['total_pages']:
+        assert len(response_body['data']) == 0
+    elif kwargs['current_page'] == kwargs['total_pages']:
+        assert len(response_body['data']) == kwargs['total_objects'] - (
+            (kwargs['total_pages'] - 1) * kwargs['objects_per_page'])
+    else:
+        assert len(response_body['data']) == kwargs['objects_per_page']

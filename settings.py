@@ -3,7 +3,7 @@ from flask_restplus import Api
 from sqlalchemy import event
 from api.utils.time_util import TimeUtil
 from api.utils.error_messages import serialization_error, authentication_errors
-from api.utils.exceptions import UniqueConstraintException, MessageOnlyResponseException
+from api.utils.exceptions import UniqueConstraintException, MessageOnlyResponseException, ModelOperationException
 from api.utils.constants import CELERY_TASKS
 import os
 from flask import Blueprint
@@ -99,6 +99,13 @@ def create_error_handlers(app):
         return {
             'status': 'error',
             'message': error.message,
+        }, error.status_code
+
+    @app.errorhandler(ModelOperationException)
+    def handle_errors(error):
+        return {
+            'status': 'error',
+            'message': error.api_message,
         }, error.status_code
 
     @app.errorhandler(PyJWTError)

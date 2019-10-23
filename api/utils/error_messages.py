@@ -29,6 +29,9 @@ serialization_error = {
     'File is not a valid image',
     'invalid_confirmation_link':
     "You can't fake a confirmation link. C'mon! Be sure that link is from your email!",
+    'not_an_admin':
+    'You must a Manager or Owner in at least one organisation to do this',
+    # 'at_les': ''
 }
 
 authentication_errors = {
@@ -46,4 +49,14 @@ authentication_errors = {
     'Confirmation timed out. You would have to resend the email',
     'invalid_auth_header':
     'Authorization token must be in format `Bearer token_value`'
+}
+
+model_operations = {
+    'both_greek_and_letter_are_none':
+    ('There must be a value for either `greek_symbol_num` or `letter_symbol`',
+     'There must be a value for either `greekSymbol` or `letterSymbol`'),
+    'both_greek_and_letter_are_provided': (
+        'Only one of `letter_symbol` or `greek_symbol_num` should have a value not both',
+        'Only one of `letterSymbol` or `greekSymbol` should have a value not both',
+    )
 }

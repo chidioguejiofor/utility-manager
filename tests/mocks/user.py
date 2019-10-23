@@ -31,11 +31,12 @@ class UserGenerator(BaseGenerator):
             }, **time_kwargs)
 
     @classmethod
-    def generate_model_obj_dict(cls):
+    def generate_model_obj_dict(cls, verified=False):
         return {
             'username': fake.simple_profile()['username'][:20],
             'first_name': fake.first_name()[:20],
             'last_name': fake.last_name()[:20],
             'email': fake.email(),
             'password': fake.password(),
+            'verified': verified,
         }

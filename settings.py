@@ -127,7 +127,6 @@ def create_error_handlers(app):
 
     @app.errorhandler(werkzeug.exceptions.NotFound)
     def handle_resource_not_found(error):
-        logging.exception(error)
         return {'status': 'error', 'message': 'Resource was not found'}, 404
 
     @app.errorhandler(Exception)

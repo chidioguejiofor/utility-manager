@@ -27,10 +27,9 @@ class BaseModel(db.Model):
                     db.UniqueConstraint(column, name=constraint_name))
         return tuple(final_list)
 
-    id = db.Column(
-        db.String(21),
-        primary_key=True,
-    )
+    id = db.Column(db.String(21),
+                   primary_key=True,
+                   default=IDGenerator.generate_id)
     created_at = db.Column(db.DateTime(timezone=True), default=TimeUtil.now)
     updated_at = db.Column(db.DateTime(timezone=True), nullable=True)
 
@@ -106,16 +105,22 @@ class BaseModel(db.Model):
         return query.update(kwargs)
 
     @classmethod
-    def bulk_create(cls, list_of_dicts):
-        """Inserts bulk data into the database using a list_of_dicts
+    def bulk_create(cls, iterable):
+        """Inserts bulk data into the database using an iterable
         
         Args:
-            list_of_dicts: Inserts multiple instances of this model into the data in bulk
+            iterable: An iterable object where each item is either a dict or
+                this model_instance
 
         Returns:
             None: Inserts the data and returns nothing
         """
-        db.session.bulk_save_objects([
-            cls(**data, id=IDGenerator.generate_id()) for data in list_of_dicts
-        ])
+        model_objs = []
+        for data in iterable:
+            if not isinstance(data, cls):
+                data = cls(**data)
+            data.id = data.id if data.id else IDGenerator.generate_id()
+            model_objs.append(data)
+
+        db.session.bulk_save_objects(model_objs)
         db.session.commit()

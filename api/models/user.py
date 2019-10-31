@@ -21,6 +21,17 @@ class User(BaseModel):
                                   lazy=True)
     owned_organisations = db.relationship('Organisation',
                                           back_populates='creator')
+    created_parameters = db.relationship(
+        'Parameter',
+        lazy='dynamic',
+        foreign_keys='Parameter.created_by_id',
+        back_populates='created_by')
+    updated_parameters = db.relationship(
+        'Parameter',
+        lazy='dynamic',
+        foreign_keys='Parameter.updated_by_id',
+        back_populates='updated_by')
+
     organisations = None
     redirect_url = None
     __unique_constraints__ = (('email', 'user_email_unique_constraint'),

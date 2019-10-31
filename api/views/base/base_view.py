@@ -101,10 +101,6 @@ class SearchFilter:
 
         if filter_type == 'ilike':
             return model_class_col.ilike(f'%{search_value}%')
-        # elif filter_type == 'lt':
-        #     return model_class_col < search_value
-        # elif filter_type == 'gt':
-        #     return model_class_col > search_value
         raise Exception('Invalid search args in model')
 
 

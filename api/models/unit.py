@@ -14,6 +14,7 @@ class Unit(BaseModel):
         (('name', 'greek_symbol_num'),
          'unit_name_and_greeksymbolnum_unique_constraint'),
     )
+    parameters = db.relationship('Parameter', back_populates='unit')
 
     def save(self, *args, **kwargs):
         if self.letter_symbol is None and self.greek_symbol_num is None:

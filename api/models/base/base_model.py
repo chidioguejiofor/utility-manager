@@ -2,7 +2,7 @@ from settings import db
 from api.utils.time_util import TimeUtil
 from api.utils.error_messages import serialization_error
 from api.utils.exceptions import UniqueConstraintException
-from sqlalchemy.ext.declarative import declared_attr, as_declarative
+from sqlalchemy.ext.declarative import declared_attr, AbstractConcreteBase
 import numpy as np
 from .id_generator import IDGenerator
 
@@ -10,6 +10,7 @@ from .id_generator import IDGenerator
 class BaseModel(db.Model):
     __abstract__ = True
     __unique_constraints__ = []
+    __unique_violation_msg__ = None
 
     @declared_attr
     def __tablename__(cls):
@@ -63,6 +64,7 @@ class BaseModel(db.Model):
 
     @classmethod
     def _valid_unique_constraints(cls, obj):
+        error_message = cls.__unique_violation_msg__
         filter_query = None
         cols = []
         for constraint_col, _ in cls.__unique_constraints__:
@@ -81,8 +83,10 @@ class BaseModel(db.Model):
 
         if cls.query.filter(filter_query).count() >= 1:
             cols = ' or '.join(cols)
-            raise UniqueConstraintException(
+            error_message = (
+                error_message if error_message else
                 serialization_error['already_exists'].format(cols))
+            raise UniqueConstraintException(error_message)
 
     @staticmethod
     def update():
@@ -124,3 +128,37 @@ class BaseModel(db.Model):
 
         db.session.bulk_save_objects(model_objs)
         db.session.commit()
+
+
+class UserActionBase(AbstractConcreteBase):
+    __back_populates__kwargs__ = None  # should be overriden in concrete class
+
+    @declared_attr
+    def created_by_id(cls):
+        return db.Column(db.String(21),
+                         db.ForeignKey('User.id',
+                                       ondelete='RESTRICT',
+                                       onupdate='CASCADE'),
+                         nullable=True)
+
+    @declared_attr
+    def updated_by_id(cls):
+        return db.Column(db.String(21),
+                         db.ForeignKey('User.id',
+                                       ondelete='RESTRICT',
+                                       onupdate='CASCADE'),
+                         nullable=True)
+
+    @declared_attr
+    def created_by(cls):
+        return db.relationship(
+            'User',
+            back_populates=cls.__back_populates__kwargs__['created_by'],
+            foreign_keys=[cls.created_by_id])
+
+    @declared_attr
+    def updated_by(cls):
+        return db.relationship(
+            'User',
+            back_populates=cls.__back_populates__kwargs__['updated_by'],
+            foreign_keys=[cls.updated_by_id])

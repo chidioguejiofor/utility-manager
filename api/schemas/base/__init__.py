@@ -1,8 +1,12 @@
 from .custom_fields import *
-from marshmallow import Schema, post_load, pre_load
+from marshmallow import Schema, post_load, EXCLUDE
 
 
 class BaseSchema(Schema):
+    class Meta:
+        unknown = EXCLUDE
+        ordered = True
+
     __model__ = None
     id = StringField(dump_only=True)
 
@@ -10,10 +14,10 @@ class BaseSchema(Schema):
     def create_objects(self, data, **kwargs):
         return self.__model__(**data)
 
-    def dump_success_data(self, model_obj, message=None):
+    def dump_success_data(self, model_obj, message=None, **kwargs):
         dump_data = {
             'status': 'success',
-            'data': self.dump(model_obj),
+            'data': self.dump(model_obj, **kwargs),
             'message': message
         }
         return dump_data

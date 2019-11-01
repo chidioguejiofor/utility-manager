@@ -1,4 +1,5 @@
-from .base import AbstractSchemaWithTimeStampsMixin, AlphaOnlyField, AlphanumericField, BaseSchema
+from .base import (AbstractSchemaWithTimeStampsMixin, AlphaOnlyField,
+                   AlphanumericField, BaseSchema, StringField)
 from marshmallow import fields, validate
 from ..models import Unit as UnitModel
 
@@ -11,3 +12,4 @@ class Unit(AbstractSchemaWithTimeStampsMixin, BaseSchema):
                                    allow_spaces=False)
     greek_symbol_num = fields.Integer(data_key='greekSymbol',
                                       validate=validate.Range(min=1, max=48))
+    organisation_id = StringField(data_key='organisationId', required=True)

@@ -1,7 +1,7 @@
 import pytest
 from .mocks.user import UserGenerator
 from .mocks.organisation import OrganisationGenerator
-from api.utils.error_messages import parameter_errors
+from api.utils.error_messages import serialization_error
 from api.models import Parameter, ValueTypeEnum, Unit
 from api.schemas import ParameterSchema as Schema
 from api.utils.exceptions import UniqueConstraintException
@@ -124,4 +124,5 @@ class TestParameterModel:
         with pytest.raises(UniqueConstraintException) as e:
             assert parameter_two.save()
 
-        assert e.value.message == parameter_errors['already_exists']
+        assert e.value.message == serialization_error['exists_in_org'].format(
+            'Parameter')

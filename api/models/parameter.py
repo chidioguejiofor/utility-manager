@@ -1,7 +1,7 @@
 import enum
 from settings import db
 from .base import BaseModel, UserActionBase
-from api.utils.error_messages import parameter_errors
+from api.utils.error_messages import serialization_error
 
 
 class ValueType(enum.Enum):
@@ -36,4 +36,5 @@ class Parameter(UserActionBase, BaseModel):
     }
     __unique_constraints__ = ((('name', 'organisation_id'),
                                'parameter_name_and_org_unique_constraint'), )
-    __unique_violation_msg__ = parameter_errors['already_exists']
+    __unique_violation_msg__ = serialization_error['exists_in_org'].format(
+        'Parameter')

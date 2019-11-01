@@ -37,10 +37,6 @@ class IDGenerator:
         return uid + ''.join(sample)
 
     @classmethod
-    def generate_id_before_insert(cls, mapper, connection, target):
-        target.id = cls.generate_id()
-
-    @classmethod
     def _get_vectorize_func(cls, chars, last_chars):
         def vectorize_func(index):
             return chars[last_chars[index]]

@@ -1,6 +1,6 @@
 import pytest
 from api.schemas import UnitSchema
-from api.utils.error_messages import model_operations
+from api.utils.error_messages import model_operations, serialization_error
 from api.models import Unit
 from api.utils.exceptions import UniqueConstraintException, ModelOperationException
 
@@ -14,12 +14,14 @@ class TestUnitSerializer:
         assert json_data['data']['name'] == unit.name
         assert json_data['data']['letterSymbol'] == unit.letter_symbol
         assert json_data['data']['greekSymbol'] is None
+        assert json_data['data']['organisationId'] is None
 
     def test_loading_json_to_model_when_data_is_valid_should_succeed(
             self, init_db):
         unit_dict = {
             'name': 'Voltage',
             'letterSymbol': 'V',
+            'organisationId': 'som_id',
         }
 
         unit = UnitSchema().load(unit_dict)
@@ -40,7 +42,8 @@ class TestUnitModel:
         Unit(name='Hertz', letter_symbol='Hz').save()
         with pytest.raises(UniqueConstraintException) as e:
             Unit(name='Hertz', letter_symbol='Hz').save()
-        assert e.value.message == 'The `name and letter_symbol` or `name and greek_symbol_num` already exists'
+        assert e.value.message == serialization_error['exists_in_org'].format(
+            'Unit')
 
     def test_should_not_save_model_with_greek_symbol_and_letter_symbol(
             self, init_db):

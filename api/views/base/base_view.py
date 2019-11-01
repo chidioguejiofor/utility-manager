@@ -77,9 +77,13 @@ class CookieGeneratorMixin:
 class SearchFilter:
     __model__ = None
 
-    def search_model(self, query_params):
+    def search_model(self, query_params, org_id=None):
         filter_condition = []
         model_query = self.__model__.query
+        if org_id:
+            model_query = self.__model__.query.filter(
+                (self.__model__.organisation_id == org_id)
+                | (self.__model__.organisation_id.is_(None)))
         for model_column in self.SEARCH_FILTER_ARGS:
             col_search_str = f'{str(model_column)}_search'
             search_value = query_params.get(col_search_str)

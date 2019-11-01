@@ -19,6 +19,7 @@ serialization_error = {
     'not_an_admin':
     'You must a Manager or Owner in at least one organisation to do this',
     'not_found': '{} was not found',
+    'exists_in_org': "This {} has already been created for your organisation",
 }
 
 authentication_errors = {
@@ -43,8 +44,6 @@ parameter_errors = {
     'number_not_a_date':
     'Please provide a valid ISO {} for arg `{}` instead of a number',
     'invalid_date': 'The value {} is not a valid Date/DateTime',
-    'already_exists':
-    "This Parameter has already been created for your organisation",
     'missing_validation_for_type':
     'A validation must be provided when valueType is {}',
     'enum_has_one_field': 'An ENUM should have more than one field in it',

@@ -34,6 +34,12 @@ class BaseModel(db.Model):
     created_at = db.Column(db.DateTime(timezone=True), default=TimeUtil.now)
     updated_at = db.Column(db.DateTime(timezone=True), nullable=True)
 
+    def before_save(self, *args, **kwargs):
+        pass
+
+    def after_save(self, *args, **kwargs):
+        pass
+
     def save(self, commit=True):
         """Saves a new model to the session
 
@@ -49,6 +55,7 @@ class BaseModel(db.Model):
         Raise:
             sqlalchemy.exc.SQLAlchemyError: when any database error occurs
         """
+        self.before_save()
         self._valid_unique_constraints(self)
         db.session.add(self)
         if commit:
@@ -57,6 +64,8 @@ class BaseModel(db.Model):
             except Exception as e:
                 db.session.rollback()
                 raise e
+
+        self.after_save()
 
     @classmethod
     def _compare_column(cls, obj, constraint_col):
@@ -128,6 +137,7 @@ class BaseModel(db.Model):
 
         db.session.bulk_save_objects(model_objs)
         db.session.commit()
+        return model_objs
 
 
 class UserActionBase(AbstractConcreteBase):

@@ -1,11 +1,15 @@
 from unittest.mock import Mock, patch
-from api.models.membership import Membership, Role
+from api.models import Membership, RoleEnum, Organisation
 from api.utils.error_messages import serialization_error, authentication_errors
 from .mocks.user import UserGenerator
 from .mocks.organisation import OrganisationGenerator
+from .assertions import assert_paginator_meta
+import math
 import json
+from api.utils.success_messages import RETRIEVED
 
 CREATE_ORG_URL = '/api/org/create'
+RETRIEVE_USER_ORGANISATIONS = '/api/user/orgs'
 CLOUDINARY_RES = {
     'public_id': 'mock-public-id',
     'secure_url': 'http://host/some-image-url.png'
@@ -155,4 +159,82 @@ class TestCreateOrganisation:
         )
         membership = memberships.first()
         assert memberships.count() == 1
-        assert membership.role == Role.OWNER
+        assert membership.role == RoleEnum.OWNER
+
+
+class TestRetrieveUserOrganisation:
+    def test_should_retrieve_user_organisations(self, init_db, client,
+                                       saved_org_and_user_generator):
+        creator, org = saved_org_and_user_generator
+        orgs_dict = [
+            dict(creator_id=creator.id, display_name='Org1',
+                 name='Organisation Un', website='some-url.com', address='My Home'),
+            dict(creator_id=creator.id, display_name='Org2',
+                 name='Organisation Deux', website='some-url2.com', address='My Home'),
+            dict(creator_id=creator.id, display_name='Org3',
+                 name='Organisation Tres', website='some-url3.com', address='My Home'),
+        ]
+        Organisation.bulk_create(orgs_dict)
+        user = UserGenerator.generate_model_obj(save=True)
+        memberships = []
+        display_names = Organisation.display_name.in_(['Org1','Org2', 'Org3'])
+        for org in Organisation.query.filter(display_names).all():
+            memberships.append(Membership(
+                organisation_id=org.id,
+                user_id=user.id,
+            ))
+        Membership.bulk_create(memberships)
+
+        token = UserGenerator.generate_token(user)
+
+        client.set_cookie('/', 'token', token)
+        response = client.get(RETRIEVE_USER_ORGANISATIONS,
+                              content_type="application/json")
+        response_body = json.loads(response.data)
+        assert response.status_code == 200
+        assert response_body['message'] == RETRIEVED.format('organisations')
+        assert response_body['status'] == 'success'
+        # import pdb; pdb.set_trace()
+        assert_paginator_meta(
+            response_body,
+            current_page=1,
+            total_objects=len(orgs_dict),
+            max_objects_per_page=10,
+            total_pages=math.ceil(len(orgs_dict) / 10),
+            next_page=None,
+            prev_page=None,
+        )
+
+    def test_should_return_empty_array_when_no_membership_is_found(self, init_db, client,
+                                       saved_org_and_user_generator):
+        creator, org = saved_org_and_user_generator
+        orgs_dict = [
+            dict(creator_id=creator.id, display_name='Org5',
+                 name='Organisation Un', website='some-url5.com', address='My Home'),
+            dict(creator_id=creator.id, display_name='Org6',
+                 name='Organisation Deux', website='some-url6.com', address='My Home'),
+            dict(creator_id=creator.id, display_name='Org7',
+                 name='Organisation Tres', website='some-url7.com', address='My Home'),
+        ]
+        Organisation.bulk_create(orgs_dict)
+        user = UserGenerator.generate_model_obj(save=True)
+        token = UserGenerator.generate_token(user)
+
+        client.set_cookie('/', 'token', token)
+        response = client.get(RETRIEVE_USER_ORGANISATIONS,
+                              content_type="application/json")
+        response_body = json.loads(response.data)
+        assert response.status_code == 200
+        assert response_body['message'] == RETRIEVED.format('organisations')
+        assert response_body['status'] == 'success'
+        assert_paginator_meta(
+            response_body,
+            current_page=1,
+            total_objects=0,
+            max_objects_per_page=10,
+            total_pages=0,
+            next_page=None,
+            prev_page=None,
+        )
+
+

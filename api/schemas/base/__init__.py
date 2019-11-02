@@ -17,8 +17,8 @@ class BaseSchema(Schema):
     def dump_success_data(self, model_obj, message=None, **kwargs):
         dump_data = {
             'status': 'success',
+            'message': message,
             'data': self.dump(model_obj, **kwargs),
-            'message': message
         }
         return dump_data
 

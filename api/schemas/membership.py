@@ -15,11 +15,11 @@ class OrganisationMembership(Organisation):
     memberships = fields.Nested(_OrgMembershipSchema, many=True)
 
 
-class _UserMembershipSchema(BaseSchema):
+class OrgAndMembershipSchema(BaseSchema):
     from .organisation import Organisation as OrganisationSchema
-    organisation = fields.Nested(OrganisationSchema)
+    organisation = fields.Nested(OrganisationSchema(exclude=['creator']))
     role = EnumField(enum=RoleEnum, by_value=False)
 
 
 class UserMembership(User):
-    memberships = fields.Nested(_UserMembershipSchema, many=True)
+    memberships = fields.Nested(OrgAndMembershipSchema, many=True)

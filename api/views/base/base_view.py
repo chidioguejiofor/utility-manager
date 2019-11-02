@@ -192,7 +192,7 @@ class Paginator:
             'previousPage': paginated_query.prev_num,
             'totalObjects': paginated_query.total,
             'totalPages': paginated_query.pages,
-            'objectsPerPage': paginated_query.per_page,
+            'maxObjectsPerPage': paginated_query.per_page,
         }
         return paginated_query.items, meta
 

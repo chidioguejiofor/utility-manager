@@ -1,1 +1,1 @@
-from .base_model import BaseModel, UserActionBase
+from .base_model import BaseModel, UserActionBase, IDGenerator

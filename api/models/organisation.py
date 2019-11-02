@@ -1,4 +1,4 @@
-from .base import BaseModel
+from .base import BaseModel, IDGenerator
 from .membership import Membership, Role
 from settings import db
 import enum
@@ -35,13 +35,34 @@ class Organisation(BaseModel):
     logo = None
     __unique_constraints__ = (('website', 'org_unique_website_constraint'), )
 
+    @classmethod
+    def bulk_create(cls, iterable):
+        """Bulk creates the organisations and their corresponding Membership
 
-@event.listens_for(Organisation, 'after_insert')
-def send_verification_email(mapper, connect, target):
-    from api.services.file_uploader import FileUploader
-    Membership(organisation_id=target.id,
-               user_id=target.creator_id,
-               role=Role.OWNER).save(commit=False)
-    if target.logo:
-        FileUploader.upload_file.delay(target.id, 'Organisation',
-                                       target.filename)
+        Args:
+            iterable:
+
+        Returns:
+            list: a list of organisation models
+        """
+        org_objs = super().bulk_create(iterable)
+        memberships = []
+        for org_obj in org_objs:
+            memberships.append(
+                Membership(
+                    user_id=org_obj.creator_id,
+                    organisation_id=org_obj.id,
+                    role=Role.OWNER,
+                ))
+        Membership.bulk_create(memberships)
+        return org_objs
+
+    def after_save(self):
+        from api.services.file_uploader import FileUploader
+
+        Membership(organisation_id=self.id,
+                   user_id=self.creator_id,
+                   role=Role.OWNER).save(commit=False)
+        if self.logo:
+            FileUploader.upload_file.delay(self.id, 'Organisation',
+                                           self.filename)

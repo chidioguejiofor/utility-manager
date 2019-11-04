@@ -52,7 +52,8 @@ class ProductionConfig(BaseConfig):
 
 
 class StagingConfig(BaseConfig):
-    pass
+    TESTING = False
+    PROPAGATE_EXCEPTIONS = True
 
 
 class TestingConfig(BaseConfig):
@@ -134,7 +135,11 @@ def create_error_handlers(app):
 
 def create_app(current_env=os.getenv('FLASK_ENV', 'production')):
     app = Flask(__name__)
-    CORS(app, origins=['http://127.0.0.1:5500'], supports_credentials=True)
+    origins = ['*']
+    if current_env == 'production':
+        origins = ['https://utility-manager-frontend.herokuapp.com']
+
+    CORS(app, origins=origins, supports_credentials=True)
     app.config.from_object(env_mapper[current_env])
     api = Api(app)
     db.init_app(app)

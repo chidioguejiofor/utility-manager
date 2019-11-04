@@ -54,7 +54,7 @@ class CookieGeneratorMixin:
 
         """
         secure_flag = 'secure' if os.getenv(
-            'FLASK_ENV') != 'development' else ''
+            'FLASK_ENV') == 'production' else ''
 
         token = 'deleted'
         expired_str = 'expires=Thu, 01 Jan 1970 00:00:00 GMT'

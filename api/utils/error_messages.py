@@ -23,16 +23,24 @@ serialization_error = {
 }
 
 authentication_errors = {
-    'token_expired': 'Token you specified has expired',
-    'unverified_user': 'Only verified users can access this',
-    'session_expired': 'Your session has expired',
-    'token_invalid': 'Token you specified is invalid',
-    'missing_token': 'Auth requirements are missing. Please login again',
+    'token_expired':
+    'Token you specified has expired',
+    'unverified_user':
+    'Only verified users can access this',
+    'session_expired':
+    'Your session has expired',
+    'token_invalid':
+    'Token you specified is invalid',
+    'missing_token':
+    'Auth requirements are missing. Please login again',
     'confirmation_expired':
     'Confirmation timed out. You would have to resend the email',
     'invalid_auth_header':
     'Authorization token must be in format `Bearer token_value`',
-    'forbidden': "You don't have permission to {}"
+    'forbidden':
+    "You don't have permission to {}",
+    'invalid_reset_link':
+    'The reset link is invalid or has expired. Please try again'
 }
 
 parameter_errors = {

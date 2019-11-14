@@ -4,9 +4,11 @@ from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 import os
 import codecs
+from datetime import datetime, timedelta
 import logging
 from api.utils.token_validator import TokenValidator
 from api.utils.constants import CONFIRM_TOKEN, CONFIRM_EMAIL_SUBJECT
+from api.services.redis_util import RedisUtil
 
 
 class EmailUtil:
@@ -69,7 +71,10 @@ class EmailUtil:
                 'redirect_url': user.redirect_url
             },
             minutes=15)
-        link_url = f'{link_url}/{token}'
+        expiry_duration = timedelta(minutes=14.5)
+        expiry_time = datetime.utcnow() + expiry_duration
+        unique_id, _ = RedisUtil.set_value(token, expiry_duration)
+        link_url = f'{link_url}/{unique_id}?expiresAt={expiry_time}'
         html = cls.extract_html_from_template(template_name,
                                               confirm_link=link_url)
         cls.send_mail_as_html.delay(subject, user.email, html)

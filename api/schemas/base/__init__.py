@@ -12,7 +12,9 @@ class BaseSchema(Schema):
 
     @post_load
     def create_objects(self, data, **kwargs):
-        return self.__model__(**data)
+        if self.__model__:
+            return self.__model__(**data)
+        return data
 
     def dump_success_data(self, model_obj, message=None, **kwargs):
         dump_data = {

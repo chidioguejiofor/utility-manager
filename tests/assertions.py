@@ -18,14 +18,12 @@ def assert_send_grid_mock_send(mock_send, receivers, *, num_of_calls=1):
 
 
 def assert_reg_confirm_email_was_sent_properly(html_content, redirect_url,
-                                               user):
+                                               user, token, link_id):
     # Extracting token from HTML content
-    token_pattern = r"\/e.+\.e.+\..+\""
-    token = re.findall(token_pattern, html_content)[0][1:-1]
     decoded = TokenValidator.decode_token(token, CONFIRM_TOKEN)
     decoded_data = decoded['data']
 
-    confirm_email_endpoint = 'api/auth/confirm/{}'
+    confirm_email_endpoint = f'api/auth/confirm/{link_id}'
     # Validating token
     assert confirm_email_endpoint.format(token) in html_content
     assert decoded_data['email'] == user.email

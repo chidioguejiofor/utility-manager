@@ -11,6 +11,20 @@ class ResetPasswordSchema(BaseSchema):
                               required=True)
 
 
+class CompleteResetPasswordSchema(BaseSchema):
+    __model__ = None
+    password = StringField(load_only=True, required=True)
+    reset_id = StringField(load_only=True, required=True, data_key='resetId')
+
+
+class LoginSchema(BaseSchema):
+    __model__ = None
+    password = StringField(load_only=True, required=True)
+    username_or_email = StringField(load_only=True,
+                                    required=True,
+                                    data_key='usernameOrEmail')
+
+
 class User(AbstractSchemaWithTimeStampsMixin, ResetPasswordSchema):
     __model__ = UserModel
     username = AlphanumericField(data_key="username",

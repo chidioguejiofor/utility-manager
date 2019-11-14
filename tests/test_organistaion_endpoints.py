@@ -164,25 +164,35 @@ class TestCreateOrganisation:
 
 class TestRetrieveUserOrganisation:
     def test_should_retrieve_user_organisations(self, init_db, client,
-                                       saved_org_and_user_generator):
+                                                saved_org_and_user_generator):
         creator, org = saved_org_and_user_generator
         orgs_dict = [
-            dict(creator_id=creator.id, display_name='Org1',
-                 name='Organisation Un', website='some-url.com', address='My Home'),
-            dict(creator_id=creator.id, display_name='Org2',
-                 name='Organisation Deux', website='some-url2.com', address='My Home'),
-            dict(creator_id=creator.id, display_name='Org3',
-                 name='Organisation Tres', website='some-url3.com', address='My Home'),
+            dict(creator_id=creator.id,
+                 display_name='Org1',
+                 name='Organisation Un',
+                 website='some-url.com',
+                 address='My Home'),
+            dict(creator_id=creator.id,
+                 display_name='Org2',
+                 name='Organisation Deux',
+                 website='some-url2.com',
+                 address='My Home'),
+            dict(creator_id=creator.id,
+                 display_name='Org3',
+                 name='Organisation Tres',
+                 website='some-url3.com',
+                 address='My Home'),
         ]
         Organisation.bulk_create(orgs_dict)
         user = UserGenerator.generate_model_obj(save=True)
         memberships = []
-        display_names = Organisation.display_name.in_(['Org1','Org2', 'Org3'])
+        display_names = Organisation.display_name.in_(['Org1', 'Org2', 'Org3'])
         for org in Organisation.query.filter(display_names).all():
-            memberships.append(Membership(
-                organisation_id=org.id,
-                user_id=user.id,
-            ))
+            memberships.append(
+                Membership(
+                    organisation_id=org.id,
+                    user_id=user.id,
+                ))
         Membership.bulk_create(memberships)
 
         token = UserGenerator.generate_token(user)
@@ -194,7 +204,6 @@ class TestRetrieveUserOrganisation:
         assert response.status_code == 200
         assert response_body['message'] == RETRIEVED.format('organisations')
         assert response_body['status'] == 'success'
-        # import pdb; pdb.set_trace()
         assert_paginator_meta(
             response_body,
             current_page=1,
@@ -205,16 +214,25 @@ class TestRetrieveUserOrganisation:
             prev_page=None,
         )
 
-    def test_should_return_empty_array_when_no_membership_is_found(self, init_db, client,
-                                       saved_org_and_user_generator):
+    def test_should_return_empty_array_when_no_membership_is_found(
+            self, init_db, client, saved_org_and_user_generator):
         creator, org = saved_org_and_user_generator
         orgs_dict = [
-            dict(creator_id=creator.id, display_name='Org5',
-                 name='Organisation Un', website='some-url5.com', address='My Home'),
-            dict(creator_id=creator.id, display_name='Org6',
-                 name='Organisation Deux', website='some-url6.com', address='My Home'),
-            dict(creator_id=creator.id, display_name='Org7',
-                 name='Organisation Tres', website='some-url7.com', address='My Home'),
+            dict(creator_id=creator.id,
+                 display_name='Org5',
+                 name='Organisation Un',
+                 website='some-url5.com',
+                 address='My Home'),
+            dict(creator_id=creator.id,
+                 display_name='Org6',
+                 name='Organisation Deux',
+                 website='some-url6.com',
+                 address='My Home'),
+            dict(creator_id=creator.id,
+                 display_name='Org7',
+                 name='Organisation Tres',
+                 website='some-url7.com',
+                 address='My Home'),
         ]
         Organisation.bulk_create(orgs_dict)
         user = UserGenerator.generate_model_obj(save=True)
@@ -236,5 +254,3 @@ class TestRetrieveUserOrganisation:
             next_page=None,
             prev_page=None,
         )
-
-

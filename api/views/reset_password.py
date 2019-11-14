@@ -7,9 +7,11 @@ from api.utils.error_messages import serialization_error, authentication_errors
 from api.utils.exceptions import MessageOnlyResponseException
 from api.utils.token_validator import TokenValidator
 from api.models import User
-from api.schemas import ResetPasswordSchema
+from api.schemas import ResetPasswordSchema, CompleteResetPasswordSchema
 from api.utils.success_messages import RESET_PASS_MAIL, PASSWORD_CHANGED
 from api.utils.constants import RESET_TOKEN, RESET_PASSWORD_SUBJECT
+
+from api.services.redis_util import RedisUtil
 
 
 @endpoint('/auth/reset')
@@ -38,14 +40,18 @@ class ResetPassword(BaseView):
 @endpoint('/auth/reset/confirm')
 class ConfirmResetPassword(BaseView):
     def patch(self):
-        password = request.get_json().get('password')
-        if not password:
+        loaded_data = CompleteResetPasswordSchema().load(request.get_json())
+        token = RedisUtil.get_key(loaded_data['reset_id'])
+        try:
+            token_data = TokenValidator.decode_token_data(token, RESET_TOKEN)
+        except jwt.exceptions.PyJWTError:
             raise MessageOnlyResponseException(
-                serialization_error['pass_is_required'], 400)
-        auth = request.headers.get('Authorization')
-        token_data = TokenValidator.decode_from_auth_header(auth, RESET_TOKEN)
+                authentication_errors['invalid_reset_link'], 400)
+        finally:
+            if token:
+                RedisUtil.delete_key(loaded_data['reset_id'])
 
         user = User.query.get(token_data['id'])
-        user.password = password
+        user.password = loaded_data['password']
         user.update()
         return {'status': 'success', 'message': PASSWORD_CHANGED}

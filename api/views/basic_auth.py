@@ -8,7 +8,7 @@ from api.utils.success_messages import REG_VERIFIED, CONFIRM_EMAIL_RESENT
 from api.utils.exceptions import MessageOnlyResponseException
 from api.utils.token_validator import TokenValidator
 from api.models import User
-from api.schemas import UserSchema
+from api.schemas import UserSchema, LoginSchema
 from api.utils.success_messages import CREATED, LOGIN
 from api.utils.constants import CONFIRM_TOKEN
 
@@ -79,10 +79,9 @@ class ConfirmEmail(BaseView):
 @endpoint('/auth/login')
 class Login(BaseView, CookieGeneratorMixin):
     def post(self):
-        user_data = request.get_json()
-        username_or_email = user_data.get('usernameOrEmail')
-        password = user_data.get('password')
-
+        user_data = LoginSchema().load(request.get_json())
+        username_or_email = user_data['username_or_email']
+        password = user_data['password']
         query_by_email = '@' in username_or_email
         if query_by_email:
             user = User.query.filter_by(email=username_or_email).first()

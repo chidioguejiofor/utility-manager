@@ -14,8 +14,7 @@ serialization_error = {
     'already_verified': 'User has already been verified',
     'invalid_url': '`redirectURL` field must be a valid URL',
     'invalid_image': 'File is not a valid image',
-    'invalid_confirmation_link':
-    "You can't fake a confirmation link. C'mon! Be sure that link is from your email!",
+    'invalid_confirmation_link': "Link is expired",
     'not_an_admin':
     'You must a Manager or Owner in at least one organisation to do this',
     'not_found': '{} was not found',

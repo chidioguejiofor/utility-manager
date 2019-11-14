@@ -115,54 +115,68 @@ class TestLoginEndpoint:
             'required']
 
 
+@patch('api.services.redis_util.RedisUtil.REDIS.get', autospec=True)
+@patch('api.services.redis_util.RedisUtil.REDIS.delete', autospec=True)
 class TestLinkClickedFromUserEmail:
     def test_user_should_be_verified_successfully_when_token_is_valid(
-            self, init_db, client):
+            self, mock_redis_delete, mock_redis_get, init_db, client):
 
         redirect_url = UserGenerator.generate_api_input_data()['redirectURL']
-
+        confirm_id = 'some-id'
         user = UserGenerator.generate_model_obj(save=True)
         user.redirect_url = redirect_url
         user.update()
         token = UserGenerator.generate_token(user, token_type=CONFIRM_TOKEN)
-        client.set_cookie('/', 'token', token)
-        response = client.get(CONFIRM_EMAIL_ENDPOINT.format(token),
+        mock_redis_get.return_value = token
+        response = client.get(CONFIRM_EMAIL_ENDPOINT.format(confirm_id),
                               content_type="application/json")
+
+        assert mock_redis_get.called
+        assert mock_redis_delete.called
+        assert mock_redis_get.call_args[0][0] == confirm_id
+        assert mock_redis_delete.call_args[0][0] == confirm_id
 
         assert response.status_code == 302
         assert response.headers.get('Location') == \
             f"{redirect_url}?success=true&message={REG_VERIFIED.replace(' ', '%20')}"
 
     def test_should_respond_with_appropriate_message_when_token_is_expired(
-            self, init_db, client):
+            self, mock_redis_delete, mock_redis_get, init_db, client):
         redirect_url = UserGenerator.generate_api_input_data()['redirectURL']
+        confirm_id = 'some-id'
         user = UserGenerator.generate_model_obj(save=True)
         user.redirect_url = redirect_url
         token = UserGenerator.generate_token(user,
                                              token_type=CONFIRM_TOKEN,
                                              seconds=-1)
-        response = client.get(CONFIRM_EMAIL_ENDPOINT.format(token),
+        mock_redis_get.return_value = token
+        response = client.get(CONFIRM_EMAIL_ENDPOINT.format(confirm_id),
                               content_type="application/json")
 
         message = authentication_errors['confirmation_expired'].replace(
             ' ', '%20')
+        assert mock_redis_get.called
+        assert mock_redis_delete.called
+        assert mock_redis_get.call_args[0][0] == confirm_id
+        assert mock_redis_delete.call_args[0][0] == confirm_id
         assert response.status_code == 302
         assert response.headers.get('Location') == \
                f"{redirect_url}?success=false&message={message}"
 
     def test_should_return_json_when_the_link_is_invalid(
-            self, init_db, client):
+            self, mock_redis_delete, mock_redis_get, init_db, client):
         redirect_url = UserGenerator.generate_api_input_data()['redirectURL']
         user = UserGenerator.generate_model_obj(save=True)
         user.redirect_url = redirect_url
         token = UserGenerator.generate_token(user,
                                              token_type=CONFIRM_TOKEN,
                                              seconds=-1)
-        time.sleep(0.1)
-        response = client.get(
-            CONFIRM_EMAIL_ENDPOINT.format('some-invalid-token'),
-            content_type="application/json")
+        mock_redis_get.return_value = None
+        response = client.get(CONFIRM_EMAIL_ENDPOINT.format('some-invalid-ID'),
+                              content_type="application/json")
 
+        assert mock_redis_get.called
+        assert mock_redis_get.call_args[0][0] == 'some-invalid-ID'
         response_body = json.loads(response.data)
         assert response.status_code == 404
         assert response_body['message'] == serialization_error[

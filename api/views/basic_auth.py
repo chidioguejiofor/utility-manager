@@ -11,6 +11,7 @@ from api.models import User
 from api.schemas import UserSchema, LoginSchema
 from api.utils.success_messages import CREATED, LOGIN
 from api.utils.constants import CONFIRM_TOKEN
+from api.services.redis_util import RedisUtil
 
 
 @endpoint('/auth/register')
@@ -52,23 +53,26 @@ class ResendEmail(BaseView):
         }, 200
 
 
-@endpoint('/auth/confirm/<string:token>')
+@endpoint('/auth/confirm/<string:confirm_id>')
 class ConfirmEmail(BaseView):
     @staticmethod
     def get(**kwargs):
+        token = RedisUtil.get_key(kwargs.get('confirm_id'))
         try:
-            token_data = TokenValidator.decode_token_data(
-                kwargs.get('token'), CONFIRM_TOKEN)
+            token_data = TokenValidator.decode_token_data(token, CONFIRM_TOKEN)
             user = User.query.get(token_data['id'])
             user.verified = True
             User.update()
+
             redirect_url = f"{token_data['redirect_url']}?success=true&message={REG_VERIFIED}"
+            RedisUtil.delete_key((kwargs.get('confirm_id')))
         except jwt.exceptions.ExpiredSignatureError:
-            token_data = TokenValidator.decode_token_data(kwargs.get('token'),
+            token_data = TokenValidator.decode_token_data(token,
                                                           CONFIRM_TOKEN,
                                                           verify=False)
             message = authentication_errors['confirmation_expired']
             redirect_url = f"{token_data['redirect_url']}?success=false&message={message}"
+            RedisUtil.delete_key((kwargs.get('confirm_id')))
         except Exception:
             raise MessageOnlyResponseException(
                 serialization_error['invalid_confirmation_link'], 404)

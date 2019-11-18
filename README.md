@@ -72,6 +72,7 @@ When you are done running your app with docker, it is best to free up resources 
 
 The above would free up memory that is used in your docker instance
 
+
 ## Running Tests
 You can run tests for the app via: `pytest --cov=api --cov-report=html`
 

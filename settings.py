@@ -17,6 +17,7 @@ from celery import Celery
 from jwt.exceptions import PyJWTError, ExpiredSignature
 import werkzeug.exceptions
 import cloudinary
+import inspect
 
 db = SQLAlchemy()
 dotenv.load_dotenv()
@@ -148,7 +149,7 @@ def create_app(current_env=os.getenv('FLASK_ENV', 'production')):
     app.register_blueprint(api_blueprint)
     app.register_blueprint(bp)
     import api.views
-    import api.models
+    import api.models as models
     tables_in_my_app = [
         cls for cls in db.Model._decl_class_registry.values()
         if isinstance(cls, type) and issubclass(cls, db.Model)
@@ -159,5 +160,13 @@ def create_app(current_env=os.getenv('FLASK_ENV', 'production')):
     celery_app.config_from_object(app.config)
     celery_scheduler.config_from_object(app.config)
     # celery_scheduler.conf.update(app.config)
+
+    @app.shell_context_processor
+    def make_shell_context():
+        return {
+            model_name: model_obj
+            for model_name, model_obj in inspect.getmembers(
+                models, inspect.isclass)
+        }
 
     return app

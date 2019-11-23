@@ -30,6 +30,7 @@ pyyaml = "*"
 
 [dev-packages]
 yapf = "*"
+flask-shell-ipython = "*"
 
 [requires]
 python_version = "3.7"

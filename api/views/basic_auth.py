@@ -1,7 +1,7 @@
 import jwt
 from .base import BaseView, CookieGeneratorMixin
 from settings import endpoint
-from flask import request, redirect
+from flask import request, redirect, make_response
 
 from api.utils.error_messages import serialization_error, authentication_errors
 from api.utils.success_messages import REG_VERIFIED, CONFIRM_EMAIL_RESENT
@@ -21,15 +21,16 @@ class Register(BaseView, CookieGeneratorMixin):
         user_obj.save()
         user_data = UserSchema().dump_success_data(user_obj,
                                                    CREATED.format('user'))
-        headers = self.generate_cookie_header(user_data['data'])
-        return user_data, 201, headers
+        return user_data, 201
 
 
 @endpoint('/auth/resend-email')
 class ResendEmail(BaseView):
-    def post(self):
+    protected_methods = ['POST']
+    unverified_methods = ['POST']
+
+    def post(self, user_data):
         from api.utils.emails import EmailUtil
-        user_data = self.decode_token()
         redirect_url = request.get_json().get('redirectURL')
         if not redirect_url or not ('http://' in redirect_url
                                     or 'https://' in redirect_url):
@@ -54,15 +55,15 @@ class ResendEmail(BaseView):
 
 
 @endpoint('/auth/confirm/<string:confirm_id>')
-class ConfirmEmail(BaseView):
-    @staticmethod
-    def get(**kwargs):
+class ConfirmEmail(BaseView, CookieGeneratorMixin):
+    def get(self, **kwargs):
         token = RedisUtil.get_key(kwargs.get('confirm_id'))
+        user = None
         try:
             token_data = TokenValidator.decode_token_data(token, CONFIRM_TOKEN)
             user = User.query.get(token_data['id'])
             user.verified = True
-            User.update()
+            user.update()
 
             redirect_url = f"{token_data['redirect_url']}?success=true&message={REG_VERIFIED}"
             RedisUtil.delete_key((kwargs.get('confirm_id')))
@@ -77,7 +78,11 @@ class ConfirmEmail(BaseView):
             raise MessageOnlyResponseException(
                 serialization_error['invalid_confirmation_link'], 404)
 
-        return redirect(redirect_url, code=302)
+        resp = redirect(redirect_url, code=302)
+        if user:
+
+            resp = self.generate_cookie(resp, user)
+        return resp
 
 
 @endpoint('/auth/login')
@@ -95,8 +100,9 @@ class Login(BaseView, CookieGeneratorMixin):
         if user and user.verify_password(password):
             user_json = UserSchema().dump_success_data(user,
                                                        LOGIN.format('user'))
-            headers = self.generate_cookie_header(user_json['data'])
-            return user_json, 200, headers
+            resp = make_response(user_json)
+            resp.status_code = 200
+            return self.generate_cookie(resp, user)
 
         raise MessageOnlyResponseException(
             message=serialization_error['login_failed'],
@@ -104,9 +110,9 @@ class Login(BaseView, CookieGeneratorMixin):
         )
 
     def delete(self):
-        headers = self.generate_cookie_header(expired=True)
-        data = {
+        resp = make_response({
             'status': 'success',
             'data': 'User was logged out successfully'
-        }
-        return data, 200, headers
+        })
+        resp.status_code = 200
+        return self.generate_cookie(resp, None)

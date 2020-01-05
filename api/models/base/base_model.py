@@ -97,9 +97,16 @@ class BaseModel(db.Model):
                 serialization_error['already_exists'].format(cols))
             raise UniqueConstraintException(error_message)
 
-    @staticmethod
-    def update():
+    def before_update(self, *args, **kwargs):
+        pass
+
+    def after_update(self, *args, **kwargs):
+        pass
+
+    def update(self, *args, **kwargs):
+        self.before_update(*args, **kwargs)
         db.session.commit()
+        self.after_update(*args, **kwargs)
 
     @classmethod
     def update_query(cls, query, **kwargs):

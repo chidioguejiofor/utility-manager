@@ -64,5 +64,7 @@ class Organisation(BaseModel):
                    user_id=self.creator_id,
                    role=Role.OWNER).save(commit=False)
         if self.logo:
+            self.filename = f'dumped_files/{self.creator_id}-organisation.jpg'
+            self.logo.save(dst=self.filename)
             FileUploader.upload_file.delay(self.id, 'Organisation',
                                            self.filename)

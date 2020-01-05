@@ -17,8 +17,6 @@ class CreateOrg(BaseView):
         org_obj = OrganisationSchema().load(data_dict)
 
         org_obj.creator_id = user_data['id']
-        org_obj.filename = f'dumped_files/{user_data["id"]}-organisation.jpg'
-        org_obj.logo.save(dst=org_obj.filename)
         org_obj.save()
         org_data = OrganisationSchema().dump_success_data(
             org_obj, CREATED.format('organisation'))

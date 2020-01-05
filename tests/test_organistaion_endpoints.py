@@ -22,9 +22,7 @@ class TestCreateOrganisation:
     def test_should_fail_when_logo_is_missing(self, mock_destroy, mock_upload,
                                               init_db, client):
         valid_data = OrganisationGenerator.generate_api_input_data()
-        user = UserGenerator.generate_model_obj()
-        user.verified = True
-        user.save()
+        user = UserGenerator.generate_model_obj(verified=True, save=True)
         token = UserGenerator.generate_token(user)
         client.set_cookie('/', 'token', token)
         response = client.post(CREATE_ORG_URL,
@@ -40,9 +38,7 @@ class TestCreateOrganisation:
             self, mock_destroy, mock_upload, init_db, client):
         org = OrganisationGenerator.generate_model_obj(save=True)
         valid_data = OrganisationGenerator.generate_api_input_data()
-        user = UserGenerator.generate_model_obj()
-        user.verified = True
-        user.save()
+        user = UserGenerator.generate_model_obj(verified=True, save=True)
         token = UserGenerator.generate_token(user)
         valid_data['website'] = org.website
         client.set_cookie('/', 'token', token)
@@ -58,9 +54,7 @@ class TestCreateOrganisation:
 
     def test_should_fail_with_appropriate_message_when_some_data_is_missing(
             self, mock_destroy, mock_upload, init_db, client):
-        user = UserGenerator.generate_model_obj()
-        user.verified = True
-        user.save()
+        user = UserGenerator.generate_model_obj(verified=True, save=True)
         token = UserGenerator.generate_token(user)
 
         client.set_cookie('/', 'token', token)
@@ -86,9 +80,7 @@ class TestCreateOrganisation:
             side_effect=FileUploader.upload_file)
         mock_upload.side_effect = Exception
         valid_data = OrganisationGenerator.generate_api_input_data()
-        user = UserGenerator.generate_model_obj()
-        user.verified = True
-        user.save()
+        user = UserGenerator.generate_model_obj(verified=True, save=True)
         token = UserGenerator.generate_token(user)
 
         client.set_cookie('/', 'token', token)
@@ -110,9 +102,7 @@ class TestCreateOrganisation:
     def test_should_fail_when_the_user_token_has_not_been_verified(
             self, mock_destroy, mock_upload, app, init_db, client):
         valid_data = OrganisationGenerator.generate_api_input_data()
-        user = UserGenerator.generate_model_obj()
-        user.verified = False
-        user.save()
+        user = UserGenerator.generate_model_obj(save=True)
         token = UserGenerator.generate_token(user)
         client.set_cookie('/', 'token', token)
         response = client.post(CREATE_ORG_URL,
@@ -130,9 +120,7 @@ class TestCreateOrganisation:
             side_effect=FileUploader.upload_file)
         mock_upload.return_value = CLOUDINARY_RES
         valid_data = OrganisationGenerator.generate_api_input_data()
-        user = UserGenerator.generate_model_obj()
-        user.verified = True
-        user.save()
+        user = UserGenerator.generate_model_obj(verified=True, save=True)
         token = UserGenerator.generate_token(user)
 
         client.set_cookie('/', 'token', token)

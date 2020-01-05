@@ -1,5 +1,5 @@
-import os
 from sqlalchemy.sql import expression
+import os
 import numpy as np
 from flask_restplus import Resource
 from flask import request
@@ -7,10 +7,15 @@ from api.utils.exceptions import MessageOnlyResponseException
 from api.utils.token_validator import TokenValidator
 from api.utils.error_messages import authentication_errors
 from api.utils.constants import LOGIN_TOKEN
+from datetime import timedelta, datetime
+from functools import wraps
 
 
-class BaseView(Resource):
-    def decode_token(self, check_user_is_verified=False):
+class Authentication:
+    def __init__(self, view):
+        self.view = view
+
+    def _decode_token(self, check_user_is_verified=False):
         """Decoded a token and returns the decoded data
 
         Args:
@@ -37,41 +42,79 @@ class BaseView(Resource):
             )
         return decoded_data
 
+    def _authenticate_user(self):
+        view = self.view
+        method = request.method.upper()
+
+        if method in view.protected_methods:
+            verified_user_only = not (method in view.unverified_methods)
+            return self._decode_token(
+                check_user_is_verified=verified_user_only)
+        return None
+
+    def __call__(self, func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            user_data = self._authenticate_user()
+
+            if user_data:
+                return func(*args, **kwargs, user_data=user_data)
+            return func(*args, **kwargs)
+
+        return wrapper
+
+
+class classproperty(object):
+    def __init__(self, f):
+        self.f = f
+
+    def __get__(self, obj, owner):
+        return self.f(owner)
+
+
+class BaseView(Resource):
+    protected_methods = []
+    unverified_methods = []
+
+    @classproperty
+    def method_decorators(self):
+        return [Authentication(self)]
+
 
 class CookieGeneratorMixin:
-    def generate_cookie_header(self, user_data=None, expired=False):
-        """Generates a dict that contains headers with cookie
+    def generate_cookie(self, resp, user):
+        """Adds cookie to the response
 
-        When expired is False, it uses the user_data to generate a token
-        and puts it in the cookie of the response.
+           When user is None, it invalidates the previously sent token
+           Args:
+               resp flask.Response: response object from
+               user models.User: User model object that would be used to generate token
+               expired bool: when True, token would be expired
 
-        When expired is True, it invalidates the previously sent token
-        Args:
-            user_data dict: User data that would be used to generate token
-            expired bool: when True, token would be expired
+           Returns:
+               flask.Response: final response object would have the required cookie
 
-        Returns:
-
-        """
-        secure_flag = 'secure' if os.getenv(
-            'FLASK_ENV') == 'production' else ''
-
+       """
+        secure_flag = os.getenv('FLASK_ENV') == 'production'
         token = 'deleted'
-        expired_str = 'expires=Thu, 01 Jan 1970 00:00:00 GMT'
-        if not expired:
-            expired_str = ''
+        expires = datetime.now() - timedelta(days=100)
+        if user:
             payload = {
                 'type': LOGIN_TOKEN,
-                'email': user_data['email'],
-                'id': user_data['id'],
-                'username': user_data['username'],
-                "verified": user_data['verified'],
+                'email': user.email,
+                'id': user.id,
+                'username': user.username,
+                "verified": user.verified,
             }
             token = TokenValidator.create_token(payload)
-        return {
-            'Set-Cookie':
-            f'token={token}; path=/; HttpOnly; {secure_flag}; {expired_str}'
-        }
+            expires = datetime.now() + timedelta(days=100)
+        resp.set_cookie('token',
+                        token,
+                        path='/',
+                        httponly=True,
+                        secure=secure_flag,
+                        expires=expires)
+        return resp
 
 
 class SearchFilter:

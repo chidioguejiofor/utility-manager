@@ -13,7 +13,8 @@ from api.utils.error_messages import serialization_error, authentication_errors
 from api.utils.constants import CONFIRM_TOKEN, RESET_TOKEN
 from api.models import User
 from .mocks.user import UserGenerator
-import time
+from dateutil import parser
+from datetime import datetime, timezone
 import json
 
 REGISTER_URL = '/api/auth/register'
@@ -36,8 +37,14 @@ class TestLogoutEndpoint:
         response = client.delete(LOGIN_URL)
 
         cookie = response.headers.get('Set-Cookie')
+        cookie_args = cookie.split(';')
+        exp_value = None
+        for arg in cookie_args:
+            if 'Expires' in arg or 'expires' in arg:
+                exp_value = parser.parse(arg.split('=')[1])
+                break
         assert response.status_code == 200
-        assert 'expires=Thu, 01 Jan 1970 00:00:00 GMT' in cookie
+        assert exp_value < datetime.now(tz=timezone.utc)
         assert 'token=deleted' in cookie
 
 

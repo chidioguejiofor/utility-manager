@@ -9,8 +9,9 @@ from api.utils.success_messages import CREATED, RETRIEVED
 
 @endpoint('/org/create')
 class CreateOrg(BaseView):
-    def post(self):
-        user_data = self.decode_token(check_user_is_verified=True)
+    protected_methods = ['POST']
+
+    def post(self, user_data):
         logo = request.files.get('logo')
         data_dict = {**request.form, 'logo': logo}
         org_obj = OrganisationSchema().load(data_dict)
@@ -28,9 +29,10 @@ class CreateOrg(BaseView):
 class RetrieveUserMemberships(BaseView, FilterByQueryMixin):
     __model__ = Membership
     SORT_KWARGS = {'defaults': 'role', 'sort_fields': {'role'}}
+    protected_methods = ['GET']
+    unverified_methods = ['GET']
 
-    def get(self):
-        user_data = self.decode_token()
+    def get(self, user_data):
         memberships = Membership.query.filter_by(user_id=user_data['id'])
         query_params = request.args
         page_query, meta = self.paginate_query(memberships, query_params)

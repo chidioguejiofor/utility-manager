@@ -29,9 +29,9 @@ class UnitView(BaseView, FilterByQueryMixin):
         'defaults': 'name,letter_symbol',
         'sort_fields': {'name', 'letter_symbol'}
     }
+    protected_methods = ['GET', 'POST']
 
-    def get(self, org_id):
-        self.decode_token(check_user_is_verified=True)
+    def get(self, org_id, user_data):
         query_params = request.args
         query = self.search_model(query_params, org_id=org_id)
         page_query, meta = self.paginate_query(query, query_params)
@@ -40,8 +40,7 @@ class UnitView(BaseView, FilterByQueryMixin):
         data['meta'] = meta
         return data, 200
 
-    def post(self, org_id):
-        user_data = self.decode_token(check_user_is_verified=True)
+    def post(self, org_id, user_data):
         input_data = request.get_json()
         input_data['organisationId'] = org_id
         unit = UnitSchema().load(input_data)

@@ -10,8 +10,9 @@ from api.utils.error_messages import serialization_error, authentication_errors
 
 @endpoint('/org/<string:org_id>/parameters')
 class CreateParameter(BaseView):
-    def post(self, org_id):
-        user_data = self.decode_token(check_user_is_verified=True)
+    protected_methods = ['POST']
+
+    def post(self, org_id, user_data):
         json_data = request.get_json()
         user_org_membership = Membership.query.filter(
             (Membership.user_id == user_data['id'])

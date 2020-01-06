@@ -2,18 +2,19 @@ import os
 import logging
 import cloudinary.uploader
 import api.models as models
-from celery_config import celery_app, app
-from settings import db
+from celery_config import celery_app
 
 
 class FileUploader:
-
     @staticmethod
     def _update_model_image(model_name, model_id, upload_response):
-        getattr(models,
-                model_name).query.filter_by(id=model_id).update(
-            dict(image_public_id=upload_response['public_id'],
-                 image_url=upload_response['secure_url']))
+        from settings import db
+        num_of_updates = getattr(
+            models, model_name).query.filter_by(id=model_id).update(
+                dict(image_public_id=upload_response['public_id'],
+                     image_url=upload_response['secure_url']))
+        db.session.commit()
+        return num_of_updates
 
     @staticmethod
     @celery_app.task(name='upload-file-to-cloudinary')
@@ -40,18 +41,15 @@ class FileUploader:
             upload_response = None
 
         if os.path.isfile(filename):
-            print('-------Removing File-----')
-            print(filename)
+            logging.info('-------Removing File-----')
+            logging.info(filename)
             os.remove(filename)
 
         if error is True:
             return "Failure"
+
         if image_public_id and upload_response:
             cloudinary.uploader.destroy(image_public_id)
 
-        if os.getenv('FLASK_ENV') == 'testing':
-            return FileUploader._update_model_image(model_name, model_id, upload_response)
-        else:
-            with app.app_context():
-                return FileUploader._update_model_image(model_name, model_id, upload_response)
-
+        return FileUploader._update_model_image(model_name, model_id,
+                                                upload_response)

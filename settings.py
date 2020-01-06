@@ -13,7 +13,7 @@ from marshmallow.exceptions import ValidationError
 from flask_cors import CORS
 import dotenv
 import logging
-from celery import Celery
+from celery import Celery, Task
 from jwt.exceptions import PyJWTError, ExpiredSignature
 import werkzeug.exceptions
 import cloudinary
@@ -31,7 +31,6 @@ cloudinary.config(cloud_name=os.getenv('CLOUDINARY_NAME'),
                   api_secret=os.getenv('CLOUDINARY_SECRET'))
 
 REDIS_SERVER_URL = os.getenv('REDIS_SERVER_URL', 'redis://localhost')
-celery_app = Celery(__name__, broker=REDIS_SERVER_URL, include=CELERY_TASKS)
 celery_scheduler = Celery(__name__, broker=REDIS_SERVER_URL)
 celery_scheduler.conf.enable_utc = False
 
@@ -44,6 +43,8 @@ class BaseConfig:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     FLASK_APP = 'app.py'
     CELERY_BROKER_URL = os.getenv('REDIS_SERVER_URL')
+    CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND',
+                                      default='redis://localhost:6379/0')
 
 
 class ProductionConfig(BaseConfig):
@@ -134,6 +135,23 @@ def create_error_handlers(app):
         return {'status': 'error', 'message': 'Unknown Error'}, 500
 
 
+def make_celery(app):
+    celery = Celery(app.import_name,
+                    backend=app.config['CELERY_RESULT_BACKEND'],
+                    broker=app.config['CELERY_BROKER_URL'],
+                    include=CELERY_TASKS)
+    celery.conf.update(app.config)
+
+    class ContextTask(celery.Task):
+        def __call__(self, *args, **kwargs):
+            with app.app_context():
+                return self.run(*args, **kwargs)
+
+    if not os.getenv('FLASK_ENV', 'testing'):
+        celery.Task = ContextTask
+    return celery
+
+
 def create_app(current_env=os.getenv('FLASK_ENV', 'production')):
     app = Flask(__name__)
     origins = ['*']
@@ -157,8 +175,6 @@ def create_app(current_env=os.getenv('FLASK_ENV', 'production')):
     add_id_event_to_models(tables_in_my_app)
 
     create_error_handlers(app)
-    celery_app.config_from_object(app.config)
-    celery_scheduler.config_from_object(app.config)
     # celery_scheduler.conf.update(app.config)
 
     @app.shell_context_processor

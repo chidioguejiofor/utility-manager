@@ -35,19 +35,3 @@ class TokenValidator:
         }
         return jwt.encode(payload, cls.SECRET,
                           algorithm='HS256').decode('utf-8')
-
-    @classmethod
-    def decode_from_auth_header(cls, auth, token_type):
-        if not auth or len(auth.split(' ')) != 2:
-            raise jwt.exceptions.DecodeError
-
-        bearer, token = auth.split(' ')
-        if bearer != 'Bearer':
-            raise MessageOnlyResponseException(
-                authentication_errors['invalid_auth_header'], 401)
-
-        try:
-            return cls.decode_token_data(token, token_type=token_type)
-        except jwt.exceptions.ExpiredSignatureError:
-            raise MessageOnlyResponseException(
-                authentication_errors['token_expired'], 401)

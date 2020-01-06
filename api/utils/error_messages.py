@@ -19,6 +19,8 @@ serialization_error = {
     'You must a Manager or Owner in at least one organisation to do this',
     'not_found': '{} was not found',
     'exists_in_org': "This {} has already been created for your organisation",
+    'empty_update_data':
+    "You did not specify any data you would like to update"
 }
 
 authentication_errors = {

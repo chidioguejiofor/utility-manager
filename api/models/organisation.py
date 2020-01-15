@@ -3,8 +3,6 @@ from .membership import Membership, Role
 from settings import db
 import enum
 
-from sqlalchemy import event
-
 
 class Subscription(enum.Enum):
     FREE = 'FREE'
@@ -62,7 +60,7 @@ class Organisation(BaseModel):
 
         Membership(organisation_id=self.id,
                    user_id=self.creator_id,
-                   role=Role.OWNER).save(commit=False)
+                   role=Role.OWNER).save(commit=True)
         if self.logo:
             self.filename = f'dumped_files/{self.creator_id}-organisation.jpg'
             self.logo.save(dst=self.filename)

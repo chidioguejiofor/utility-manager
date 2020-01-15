@@ -147,7 +147,7 @@ def make_celery(app):
             with app.app_context():
                 return self.run(*args, **kwargs)
 
-    if not os.getenv('FLASK_ENV', 'testing'):
+    if os.getenv('FLASK_ENV', 'development') != 'testing':
         celery.Task = ContextTask
     return celery
 

@@ -1,10 +1,15 @@
 import os
 import redis
 from api.models.base.id_generator import IDGenerator
+from api.models.role import Role
+from tests.mocks.redis import RedisMock
 
 
 class RedisUtil:
-    REDIS = redis.from_url(os.getenv('REDIS_SERVER_URL'))
+    REDIS = RedisMock
+    if os.getenv('FLASK_ENV') != 'testing':
+        REDIS = redis.from_url(os.getenv('REDIS_SERVER_URL'))
+        REDIS.flushall(True)
 
     @classmethod
     def set_value(cls, value, expiry_time):
@@ -24,6 +29,12 @@ class RedisUtil:
         success = cls.REDIS.set(unique_key, value)
         cls.REDIS.expire(unique_key, int(expiry_time.total_seconds()))
         return unique_key, success
+
+    @classmethod
+    def set_key(cls, key, value, expiry_time=None):
+        cls.REDIS.set(key, value)
+        if expiry_time:
+            cls.REDIS.expire(key, int(expiry_time.total_seconds()))
 
     @classmethod
     def get_key(cls, key):
@@ -48,3 +59,17 @@ class RedisUtil:
 
         """
         return cls.REDIS.delete(key)
+
+    @classmethod
+    def get_role_id(cls, role_name):
+        role_key = f'ROLE_{role_name}'
+        role_id = cls.get_key(role_key)
+
+        if not role_id:
+            role = Role.query.filter_by(name=role_name).first()
+            if role:
+                cls.set_key(role_key, role.id)
+                role_id = role.id
+        if isinstance(role_id, bytes):
+            return role_id.decode('utf-8')
+        return role_id

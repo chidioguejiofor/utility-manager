@@ -3,13 +3,37 @@ import numpy as np
 import os
 from abc import ABC
 
+import dateutil.parser
+from datetime import datetime, timezone
+from api.models.base.id_generator import IDGenerator
+
 
 class BaseSeeder(ABC):
     __model__ = KEY = None
 
+    def __init__(self, *args, **kwargs):
+        self.id = kwargs.get('id') if id else IDGenerator.generate_id()
+        created_at = kwargs.get('created_at')
+        updated_at = kwargs.get('updated_at')
+
+        self.created_at = created_at if created_at else datetime.now(
+            timezone.utc)
+        if updated_at is not None:
+            updated_at = dateutil.parser.parse(updated_at)
+        self.updated_at = updated_at
+
     @classmethod
     def _convert_to_dicts(cls, list_of_objs):
         return [obj.to_dict() for obj in list_of_objs]
+
+    def model_filter(self):
+        raise Exception(f'Implement model_filter in {self.__class__.__name__}')
+
+    def __eq__(self, other):
+        raise Exception(f'Implement __eq__ in {self.__class__.__name__}')
+
+    def __lt__(self, other):
+        return False
 
     @classmethod
     def read_data_from_file_to_model(cls):
@@ -19,10 +43,6 @@ class BaseSeeder(ABC):
             return [cls.__model__(**data) for data in list_of_data]
         else:
             return []
-
-    @classmethod
-    def generate_data_to_seed(cls):
-        data = cls.read_data_from_file_to_model()
 
     @classmethod
     def _initialise_from_dict_or_query(cls, obj):
@@ -66,6 +86,9 @@ class BaseSeeder(ABC):
         if list_of_data:
             existing_data = np.array([cls(**data) for data in list_of_data])
         return existing_data
+
+    def to_dict(self):
+        raise Exception(f'Implement to_dict {self.__class__.__name__}')
 
     def to_model(self):
         return self.__model__(**self.to_dict())

@@ -57,6 +57,7 @@ class BaseModel(db.Model):
         """
         self.before_save()
         self._valid_unique_constraints(self)
+
         db.session.add(self)
         if commit:
             try:

@@ -79,3 +79,168 @@ You can run tests for the app via: `pytest --cov=api --cov-report=html`
 All features added to the app must fully tested with the aim being 95% coverage. 
 Although the coverage is important, it more important to test the right things and necessary edge cases
 
+
+## Seeding Infrastructure
+In order to ensure data integrity we create a seeder infrastructure that would check that the data meets
+certain requirements before it is seeded to the database. 
+
+Everything related to seeders is in the seeders package. 
+
+This infrastructure ensures that:
+1. Data which are effectively the same is not seeded to the database twice
+2. Unique constraints are met.
+3. Trying to seed the same data more than once does not result in duplicate data
+4. Seeded data can be easily viewed in YAML files.
+5. Seeders can be generated either from list of dicts or a sqlachemy query object
+
+### Generating Seed data
+
+The steps to generating seed data to the db are as follows:
+
+- Open the shell via `flask shell`
+- Create a list of dictionary or get a query object from the sqlachemy and store that in a variable
+- Import seeders manager and call the `write_seed_data` function passing the required arguments
+
+For example,
+```
+from seeders.seeders_manager import SeederManager
+roles = [
+
+  {
+    'name': 'admin',
+    'description': 'The admin is second only to the owner of the organisation'
+  },
+   {
+    'name': 'owner',
+    'description': 'This represents the owner of the organisation'
+  },
+  {
+    'name': 'engineer',
+    'description': 'An engineer should be allowed to do things like logging but should not be able to invite users to the organistion'
+  },
+  {
+    'name': 'regular users',
+    'description': 'This represents non engineering members of the organisation'
+  }
+]
+
+SeederManager.write_seed_data('role', roles) # generates fixtures in seeders/fixture
+
+```
+The above is exactly how the roles seed data was generated. Note that you would need to configure SeedManager 
+to recognise the 'key' (which is 'role' in this case)  and the steps for that is shown in the next 2 sub-section.
+
+### Seeding the database
+
+Once you have generated the data to be seeded open the shell and run: 
+
+```
+SeederManager.seed_database('role') 
+```
+
+This would update the db with new data for the specified 'key'. 
+
+In order to ensure that this data appears everywhere, you should add a sqlachemy migration that seeds the new data to the
+database. You can add a revision by running `flask db revision`. Then make the call to seed the database in the generated
+ file eg:
+
+```
+"""generate role seeders
+
+Revision ID: 9227f4a42619
+Revises: 7e11e7009b8f
+Create Date: 2020-01-15 22:48:40.563175
+
+"""
+from alembic import op
+import sqlalchemy as sa
+from seeders.seeders_manager import SeederManager
+
+# revision identifiers, used by Alembic.
+revision = '9227f4a42619'
+down_revision = '7e11e7009b8f'
+branch_labels = None
+depends_on = None
+
+
+def upgrade():
+    SeederManager.seed_database('role')
+
+
+def downgrade():
+    pass
+
+```
+
+The above is once again from the roles model.
+
+### Adding new Seeders to the app
+When a model requires a seeder, it should be created
+in model_seeders module, extend `BaseSeeder` and override the following methods:
+
+- `__eq__`: This would be used to determine when two seeders are equal to each other
+- `model_filter`: This returns a `sqlalchemy.sql.elements.BinaryExpression`
+(created by comparing a model attribute eg. `User.first_name == 'ada'` ) that determines how the seeder object
+would be compared with the model to ensure that it has not already been created.
+- `to_dict`: should return a dictionary that with the model attributes key-value pairs.
+
+For example, assuming we have seeders for users( we don't!). It would look something like this
+
+```
+
+class UserSeed(BaseSeeder):
+    __model__ = UserModel
+    KEY = 'user'
+
+    def __init__(self,
+                 first_name,
+                 last_name,
+                 username,
+                 email,
+                **kwargs):
+        super().__init__(**kwargs)
+        self.id = id if id else IDGenerator.generate_id()
+        self.first_name = first_name
+        self.last_name = last_name
+        self.username = username
+        self.email = email
+
+    def __eq__(self, other):
+        return self.username == other.username or self.email == other.email
+
+    def model_filter(self):
+        return (
+                (self.__model__.username == self.username)  | (self.__model__.email == self.email)
+        )
+    
+    def __lt__(self, other):
+        return False
+
+    def __repr__(self):
+        return "%s(username=%r,first_name=%r, last_name=%r, email=%r, created_at=%s, updated_at=%s)" % (
+            self.__class__.__name__,
+            self.username,
+            self.first_name,
+            self.last_name,
+            self.email,
+            self.created_at,
+            self.updated_at,
+        )
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'first_name': self.first_name,
+            'last_name': self.last_name,
+            'username': self.username,
+            'email': self.email,
+            'created_at': self.created_at,
+            'updated_at': self.updated_at,
+        }
+
+```
+
+Once you have done this, the next thing is to make the `SeederManager` 'aware' of the new seeder by adding it to 
+the `MAPPER` dictionary. With that you are done. 
+
+

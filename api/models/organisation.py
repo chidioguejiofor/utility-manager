@@ -1,5 +1,6 @@
 from .base import BaseModel, IDGenerator
-from .membership import Membership, Role
+from api.services.redis_util import RedisUtil
+from .membership import Membership
 from settings import db
 import enum
 
@@ -50,17 +51,21 @@ class Organisation(BaseModel):
                 Membership(
                     user_id=org_obj.creator_id,
                     organisation_id=org_obj.id,
-                    role=Role.OWNER,
+                    role_id=RedisUtil.get_role_id('OWNER'),
                 ))
         Membership.bulk_create(memberships)
         return org_objs
+
+    def before_save(self, *args, **kwargs):
+        if not self.id:
+            self.id = IDGenerator.generate_id()
 
     def after_save(self):
         from api.services.file_uploader import FileUploader
 
         Membership(organisation_id=self.id,
                    user_id=self.creator_id,
-                   role=Role.OWNER).save(commit=True)
+                   role_id=RedisUtil.get_role_id('OWNER')).save(commit=True)
         if self.logo:
             self.filename = f'dumped_files/{self.creator_id}-organisation.jpg'
             self.logo.save(dst=self.filename)

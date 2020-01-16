@@ -1,11 +1,12 @@
 import numpy as np
-from .model_seeders import UnitSeed
+from .model_seeders import UnitSeed, RoleSeed
 import yaml
 
 
 class SeederManager:
     MAPPER = {
         'unit': UnitSeed,
+        'role': RoleSeed,
     }
 
     @classmethod

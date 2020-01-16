@@ -1,7 +1,8 @@
 from .base import BaseView
 from settings import endpoint
 from flask import request
-from api.models import Membership, RoleEnum
+from api.models import Membership
+from api.services.redis_util import RedisUtil
 from api.schemas import ParameterSchema
 from api.utils.exceptions import MessageOnlyResponseException
 from api.utils.success_messages import CREATED
@@ -23,7 +24,11 @@ class CreateParameter(BaseView):
                     'Organisation'),
                 status_code=404,
             )
-        if user_org_membership.role not in [RoleEnum.MANAGER, RoleEnum.OWNER]:
+        allowed_roles = [
+            RedisUtil.get_role_id('MANAGER'),
+            RedisUtil.get_role_id('OWNER'),
+        ]
+        if user_org_membership.role.id not in allowed_roles:
             raise MessageOnlyResponseException(
                 message=authentication_errors['forbidden'].format(
                     'create a parameter'),

@@ -1,6 +1,6 @@
 import math
 import json
-from api.models import Unit, ValueTypeEnum, User, Membership, RoleEnum
+from api.models import Unit, ValueTypeEnum, Membership, Role
 from api.utils.error_messages import serialization_error, parameter_errors, authentication_errors
 from api.utils.success_messages import CREATED, RETRIEVED
 from .mocks.user import UserGenerator
@@ -62,10 +62,10 @@ class TestCreateParameterEndpointWithoutValidation:
             saved_org_and_user_generator):
         user, org = saved_org_and_user_generator
         user_two_ = UserGenerator.generate_model_obj(save=True, verified=True)
-        Membership(
-            user_id=user_two_.id,
-            organisation_id=org.id,
-        ).save()
+        Membership(user_id=user_two_.id,
+                   organisation_id=org.id,
+                   role_id=Role.query.filter_by(
+                       name='REGULAR USERS').one().id).save()
         unit = Unit.query.filter_by(name='Voltage').first()
         parameter_json = {
             'name': 'V1',

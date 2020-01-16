@@ -4,7 +4,7 @@ from .mocks.user import UserGenerator
 from .mocks.organisation import OrganisationGenerator
 from api.schemas import UserMembershipSchema, UserSchema
 from api.utils.error_messages import serialization_error
-from api.models import User, Organisation, Membership, RoleEnum
+from api.models import User, Organisation, Membership, Role
 from api.utils.exceptions import UniqueConstraintException
 
 
@@ -73,7 +73,7 @@ class TestUserSerializer:
         assert len(dumped_data['memberships']) == 2
         assert dumped_data['firstName'] == valid_user_obj.first_name
         assert dumped_data['lastName'] == valid_user_obj.last_name
-        assert dumped_data['memberships'][0]['role'] == 'OWNER'
+        assert dumped_data['memberships'][0]['role']['name'] == 'OWNER'
 
 
 class TestUserModel:
@@ -120,8 +120,9 @@ class TestUserModel:
         user = User.query.filter(User.id == valid_user_obj.id).first()
         user_org = Membership.query.filter((Membership.user_id == user.id) & (
             Membership.organisation_id == org.id)).first().organisation
+        owner = Role.query.filter_by(name='OWNER').first()
         assert user_org.id == org.id
         assert user_org.name == org.name
         assert user_org.website == org.website
         assert user_org.display_name == org.display_name
-        assert membership.role == RoleEnum.OWNER
+        assert membership.role == owner

@@ -3,6 +3,8 @@ from settings import create_app, db
 from api.models import Unit
 from .mocks.organisation import OrganisationGenerator
 from .mocks.user import UserGenerator
+from seeders.seeders_manager import SeederManager
+from .mocks.redis import RedisMock
 
 
 @pytest.yield_fixture(scope='session')
@@ -41,6 +43,8 @@ def unit_objs(app):
 @pytest.yield_fixture(scope='module')
 def init_db(app):
     db.create_all()
+    SeederManager.seed_database('role')
+    RedisMock.flush_all()
     yield db
     db.session.close()
     db.drop_all()

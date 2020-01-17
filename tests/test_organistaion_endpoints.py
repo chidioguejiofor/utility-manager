@@ -1,8 +1,9 @@
 from unittest.mock import Mock, patch
-from api.models import Membership, RoleEnum, Organisation
+from api.models import Membership, Organisation, Role
 from api.utils.error_messages import serialization_error, authentication_errors
 from .mocks.user import UserGenerator
 from .mocks.organisation import OrganisationGenerator
+from .mocks.redis import RedisMock
 from .assertions import assert_paginator_meta
 import math
 import json
@@ -35,7 +36,12 @@ class TestCreateOrganisation:
             'message']
 
     def test_should_fail_when_the_website_already_exists(
-            self, mock_destroy, mock_upload, init_db, client):
+            self, mock_destroy, mock_upload, app, init_db, client):
+        from api.services.file_uploader import FileUploader
+        FileUploader.upload_file.delay = Mock(
+            side_effect=FileUploader.upload_file)
+        RedisMock.flush_all()
+        mock_upload.return_value = CLOUDINARY_RES
         org = OrganisationGenerator.generate_model_obj(save=True)
         valid_data = OrganisationGenerator.generate_api_input_data()
         user = UserGenerator.generate_model_obj(verified=True, save=True)
@@ -78,6 +84,7 @@ class TestCreateOrganisation:
         from api.services.file_uploader import FileUploader
         FileUploader.upload_file.delay = Mock(
             side_effect=FileUploader.upload_file)
+        RedisMock.flush_all()
         mock_upload.side_effect = Exception
         valid_data = OrganisationGenerator.generate_api_input_data()
         user = UserGenerator.generate_model_obj(verified=True, save=True)
@@ -98,6 +105,8 @@ class TestCreateOrganisation:
         assert response_body['data']['creator']['email'] == user.email
         assert response_body['data']['creator']['id'] == user.id
         assert mock_upload.called
+        owner_role = Role.query.filter_by(name='OWNER').first().id
+        assert RedisMock.get('ROLE_OWNER') == owner_role
 
     def test_should_fail_when_the_user_token_has_not_been_verified(
             self, mock_destroy, mock_upload, app, init_db, client):
@@ -118,11 +127,11 @@ class TestCreateOrganisation:
         from api.services.file_uploader import FileUploader
         FileUploader.upload_file.delay = Mock(
             side_effect=FileUploader.upload_file)
+        RedisMock.flush_all()
         mock_upload.return_value = CLOUDINARY_RES
         valid_data = OrganisationGenerator.generate_api_input_data()
         user = UserGenerator.generate_model_obj(verified=True, save=True)
         token = UserGenerator.generate_token(user)
-
         client.set_cookie('/', 'token', token)
         with open('tests/mocks/org_image.jpg', 'rb') as file:
             valid_data['logo'] = file
@@ -130,6 +139,7 @@ class TestCreateOrganisation:
                                    data=valid_data,
                                    content_type="multipart/form-data")
         response_body = json.loads(response.data)
+        owner_role = Role.query.filter_by(name='OWNER').first().id
         # Asserting response object
         assert response.status_code == 201
         assert FileUploader.upload_file.delay.called
@@ -147,12 +157,14 @@ class TestCreateOrganisation:
         )
         membership = memberships.first()
         assert memberships.count() == 1
-        assert membership.role == RoleEnum.OWNER
+        assert membership.role.id == owner_role
+        assert RedisMock.get('ROLE_OWNER') == owner_role
 
 
 class TestRetrieveUserOrganisation:
     def test_should_retrieve_user_organisations(self, init_db, client,
                                                 saved_org_and_user_generator):
+        RedisMock.flush_all()
         creator, org = saved_org_and_user_generator
         orgs_dict = [
             dict(creator_id=creator.id,
@@ -175,11 +187,13 @@ class TestRetrieveUserOrganisation:
         user = UserGenerator.generate_model_obj(save=True)
         memberships = []
         display_names = Organisation.display_name.in_(['Org1', 'Org2', 'Org3'])
+        role_id = Role.query.filter_by(name='REGULAR USERS').one().id
         for org in Organisation.query.filter(display_names).all():
             memberships.append(
                 Membership(
                     organisation_id=org.id,
                     user_id=user.id,
+                    role_id=role_id,
                 ))
         Membership.bulk_create(memberships)
 
@@ -205,6 +219,7 @@ class TestRetrieveUserOrganisation:
     def test_should_return_empty_array_when_no_membership_is_found(
             self, init_db, client, saved_org_and_user_generator):
         creator, org = saved_org_and_user_generator
+        RedisMock.flush_all()
         orgs_dict = [
             dict(creator_id=creator.id,
                  display_name='Org5',

@@ -17,7 +17,7 @@ class CreateOrg(BaseView):
         org_obj = OrganisationSchema().load(data_dict)
 
         org_obj.creator_id = user_data['id']
-        org_obj.save()
+        org_obj.save(commit=False)
         org_data = OrganisationSchema().dump_success_data(
             org_obj, CREATED.format('organisation'))
         return org_data, 201
@@ -26,7 +26,7 @@ class CreateOrg(BaseView):
 @endpoint('/user/orgs')
 class RetrieveUserMemberships(BaseView, FilterByQueryMixin):
     __model__ = Membership
-    SORT_KWARGS = {'defaults': 'role', 'sort_fields': {'role'}}
+    SORT_KWARGS = {'defaults': 'role_id', 'sort_fields': {'role_id'}}
     protected_methods = ['GET']
     unverified_methods = ['GET']
 

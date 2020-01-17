@@ -13,6 +13,7 @@ from api.utils.error_messages import serialization_error, authentication_errors
 from api.utils.constants import CONFIRM_TOKEN, RESET_TOKEN
 from api.models import User
 from .mocks.user import UserGenerator
+from .mocks.redis import RedisMock
 from dateutil import parser
 from datetime import datetime, timezone
 import json
@@ -122,33 +123,29 @@ class TestLoginEndpoint:
             'required']
 
 
-@patch('api.services.redis_util.RedisUtil.REDIS.get', autospec=True)
-@patch('api.services.redis_util.RedisUtil.REDIS.delete', autospec=True)
 class TestLinkClickedFromUserEmail:
     def test_user_should_be_verified_successfully_when_token_is_valid(
-            self, mock_redis_delete, mock_redis_get, init_db, client):
-
+            self, init_db, client):
         redirect_url = UserGenerator.generate_api_input_data()['redirectURL']
         confirm_id = 'some-id'
         user = UserGenerator.generate_model_obj(save=True)
         user.redirect_url = redirect_url
         user.update()
         token = UserGenerator.generate_token(user, token_type=CONFIRM_TOKEN)
-        mock_redis_get.return_value = token
+        RedisMock.set(confirm_id, token)
+
+        assert RedisMock.get(confirm_id) == token
         response = client.get(CONFIRM_EMAIL_ENDPOINT.format(confirm_id),
                               content_type="application/json")
-
-        assert mock_redis_get.called
-        assert mock_redis_delete.called
-        assert mock_redis_get.call_args[0][0] == confirm_id
-        assert mock_redis_delete.call_args[0][0] == confirm_id
-
+        assert RedisMock.get(
+            confirm_id
+        ) is None  # check that it was removed from redis ie delete is called
         assert response.status_code == 302
         assert response.headers.get('Location') == \
             f"{redirect_url}?success=true&message={REG_VERIFIED.replace(' ', '%20')}"
 
     def test_should_respond_with_appropriate_message_when_token_is_expired(
-            self, mock_redis_delete, mock_redis_get, init_db, client):
+            self, init_db, client):
         redirect_url = UserGenerator.generate_api_input_data()['redirectURL']
         confirm_id = 'some-id'
         user = UserGenerator.generate_model_obj(save=True)
@@ -156,54 +153,54 @@ class TestLinkClickedFromUserEmail:
         token = UserGenerator.generate_token(user,
                                              token_type=CONFIRM_TOKEN,
                                              seconds=-1)
-        mock_redis_get.return_value = token
+        RedisMock.set(confirm_id, token)
+        assert RedisMock.get(confirm_id) == token
+
         response = client.get(CONFIRM_EMAIL_ENDPOINT.format(confirm_id),
                               content_type="application/json")
 
         message = authentication_errors['confirmation_expired'].replace(
             ' ', '%20')
-        assert mock_redis_get.called
-        assert mock_redis_delete.called
-        assert mock_redis_get.call_args[0][0] == confirm_id
-        assert mock_redis_delete.call_args[0][0] == confirm_id
+
+        assert RedisMock.get(
+            confirm_id
+        ) is None  # check that it was removed from redis ie delete is called
         assert response.status_code == 302
         assert response.headers.get('Location') == \
                f"{redirect_url}?success=false&message={message}"
 
     def test_should_return_json_when_the_link_is_invalid(
-            self, mock_redis_delete, mock_redis_get, init_db, client):
+            self, init_db, client):
         redirect_url = UserGenerator.generate_api_input_data()['redirectURL']
         user = UserGenerator.generate_model_obj(save=True)
         user.redirect_url = redirect_url
         token = UserGenerator.generate_token(user,
                                              token_type=CONFIRM_TOKEN,
                                              seconds=-1)
-        mock_redis_get.return_value = None
+        RedisMock.flush_all()
         response = client.get(CONFIRM_EMAIL_ENDPOINT.format('some-invalid-ID'),
                               content_type="application/json")
 
-        assert mock_redis_get.called
-        assert mock_redis_get.call_args[0][0] == 'some-invalid-ID'
+        assert RedisMock.get('some-invalid-ID') is None  # was not
         response_body = json.loads(response.data)
         assert response.status_code == 404
         assert response_body['message'] == serialization_error[
             'invalid_confirmation_link']
 
 
-@patch('api.services.redis_util.RedisUtil.REDIS.set', autospec=True)
-@patch('api.services.redis_util.RedisUtil.REDIS.expire', autospec=True)
 @patch('api.utils.emails.EmailUtil.SEND_CLIENT.send', autospec=True)
 class TestResendEmail:
     def test_user_should_be_able_to_resend_email_when_he_has_not_verified_account(
-            self, mock_send, mock_redis_expire, mock_redis_set, init_db,
-            client):
+            self, mock_send, init_db, client):
         from api.utils.emails import EmailUtil
+        RedisMock.flush_all()
         EmailUtil.send_mail_as_html.delay = Mock(
             side_effect=EmailUtil.send_mail_as_html)
         redirect_url = UserGenerator.generate_api_input_data()['redirectURL']
         valid_data = json.dumps({'redirectURL': redirect_url})
         user = UserGenerator.generate_model_obj(save=True)
         token = UserGenerator.generate_token(user)
+
         client.set_cookie('/', 'token', token)
         response = client.post(RESEND_EMAIL_ENDPOINT,
                                data=valid_data,
@@ -212,18 +209,24 @@ class TestResendEmail:
         assert_successful_response(response,
                                    CONFIRM_EMAIL_RESENT.format(user.email))
         html_content = assert_send_grid_mock_send(mock_send, user.email)
-        set_key, token = mock_redis_set.call_args[0]
-        exp_key, token_duration = mock_redis_expire.call_args[0]
+
+        set_key = list(RedisMock.cache.keys())[0]  # the only key in token_key
+        exp_key = list(
+            RedisMock.expired_cache.keys())[0]  # the only key in expired_key
+
+        token = RedisMock.get(set_key)
+        token_duration = RedisMock.expired_cache[exp_key]
+
         token_data = TokenValidator.decode_token_data(token, CONFIRM_TOKEN)
         assert token_data['id'] == user.id
-        assert exp_key == set_key
-        assert token_duration == 60 * 14.5
+
+        assert exp_key == set_key  # checks that the key was expired to a time in the future
+        assert token_duration == 60 * 14.5  # tests the amount of time token should last
         assert_reg_confirm_email_was_sent_properly(html_content, redirect_url,
                                                    user, token, set_key)
 
     def test_when_redirect_email_is_invalid_should_fail(
-            self, mock_send, mock_redis_expire, mock_redis_set, init_db,
-            client):
+            self, mock_send, init_db, client):
         valid_data = json.dumps({'redirectURL': 'ftp://here.com'})
         user = UserGenerator.generate_model_obj(save=True)
         token = UserGenerator.generate_token(user)
@@ -237,12 +240,10 @@ class TestResendEmail:
         assert response_body['message'] == serialization_error[
             'invalid_url'].format('Redirect URL')
         assert response_body['status'] == 'error'
-        assert mock_send.called == mock_redis_expire.called == mock_redis_set.called
         assert mock_send.called is False
 
     def test_it_should_error_when_the_user_is_already_verified(
-            self, mock_send, mock_redis_expire, mock_redis_set, init_db,
-            client):
+            self, mock_send, init_db, client):
 
         redirect_url = UserGenerator.generate_api_input_data()['redirectURL']
         valid_data = json.dumps({'redirectURL': redirect_url})
@@ -260,66 +261,54 @@ class TestResendEmail:
         assert response_body['message'] == serialization_error[
             'already_verified']
         assert response_body['status'] == 'error'
-        assert mock_send.called == mock_redis_expire.called == mock_redis_set.called
+        # assert mock_send.called == mock_redis_expire.called == mock_redis_set.called
         assert mock_send.called is False
 
     def test_it_should_fail_when_token_is_not_provided(self, mock_send,
-                                                       mock_redis_expire,
-                                                       mock_redis_set, init_db,
-                                                       client):
+                                                       init_db, client):
         response = client.post(RESEND_EMAIL_ENDPOINT,
                                content_type="application/json")
         assert_when_token_is_missing(response)
-        assert mock_send.called == mock_redis_expire.called == mock_redis_set.called
         assert mock_send.called is False
 
-    def test_it_should_fail_when_token_is_invalid(self, mock_send,
-                                                  mock_redis_expire,
-                                                  mock_redis_set, init_db,
+    def test_it_should_fail_when_token_is_invalid(self, mock_send, init_db,
                                                   client):
         client.set_cookie('/', 'token', 'some-invalid-token')
         response = client.post(RESEND_EMAIL_ENDPOINT,
                                content_type="application/json")
         assert_when_token_is_invalid(response)
-        assert mock_send.called == mock_redis_expire.called == mock_redis_set.called
         assert mock_send.called is False
 
 
-@patch('api.services.redis_util.RedisUtil.REDIS.set', autospec=True)
-@patch('api.services.redis_util.RedisUtil.REDIS.get', autospec=True)
-@patch('api.services.redis_util.RedisUtil.REDIS.delete', autospec=True)
-@patch('api.services.redis_util.RedisUtil.REDIS.expire', autospec=True)
 class TestConfirmResetPassword:
     def test_user_should_be_able_to_reset_their_password_once_reset_token_is_provided(
-            self, mock_expire, mock_delete, mock_get, mock_set, init_db,
-            client):
+            self, init_db, client):
         user = UserGenerator.generate_model_obj(save=True)
         token = UserGenerator.generate_token(user, token_type=RESET_TOKEN)
-        mock_get.return_value = token
+        RedisMock.flush_all()
         new_password = 'some-very-new-password'
         mock_reset_id = 'mock_id'
+        RedisMock.set(mock_reset_id, token)
         valid_data = json.dumps({
             'password': new_password,
             'resetId': mock_reset_id
         })
+
+        assert RedisMock.get(mock_reset_id) == token
         response = client.patch(CONFIRM_RESET_PASSWORD_ENDPOINT,
                                 data=valid_data,
                                 content_type="application/json")
         response_body = json.loads(response.data)
         user = User.query.get(user.id)
-        assert mock_get.call_count == 1
-        assert mock_delete.call_count == 1
-        assert mock_expire.called is False
-        reset_key = mock_get.call_args[0][0]
-        assert mock_delete.call_args[0][0] == reset_key
-        assert reset_key == mock_reset_id
+        assert RedisMock.get(
+            mock_reset_id) is None  # this means that delete was called
+        assert len(RedisMock.expired_cache) == 0  # expired was not called
         assert user.verify_password(new_password)
         assert response.status_code == 200
         assert response_body['message'] == PASSWORD_CHANGED
 
     def test_error_message_should_be_sent_when_password_is_not_provided(
-            self, mock_expire, mock_delete, mock_get, mock_set, init_db,
-            client):
+            self, init_db, client):
         user = UserGenerator.generate_model_obj(save=True)
         token = UserGenerator.generate_token(user, token_type=RESET_TOKEN)
         valid_data = json.dumps({})
@@ -329,8 +318,6 @@ class TestConfirmResetPassword:
                                 headers={'Authorization': f'Bearer {token}'})
         response_body = json.loads(response.data)
         assert response.status_code == 400
-        assert mock_expire.called == mock_delete.called == mock_get.called == mock_set.called
-        assert mock_set.called is False
         assert response_body['message'] == serialization_error[
             'invalid_field_data']
         assert response_body['errors']['resetId'][0] == serialization_error[
@@ -339,9 +326,8 @@ class TestConfirmResetPassword:
             'required']
 
     def test_should_fail_with_appropriate_message_when_reset_id_is_invalid(
-            self, mock_expire, mock_delete, mock_get, mock_set, init_db,
-            client):
-        mock_get.return_value = None
+            self, init_db, client):
+        RedisMock.flush_all()
         new_password = 'some-very-new-password'
         reset_id = 'resetID'
         valid_data = json.dumps({
@@ -356,25 +342,22 @@ class TestConfirmResetPassword:
         assert response_body['message'] == authentication_errors[
             'invalid_reset_link']
 
-        assert mock_get.call_count == 1
-        assert mock_delete.call_count == 0
-        assert not mock_expire.called
-        assert mock_set.called is False
+        assert RedisMock.get(reset_id) is None
 
     def test_should_fail_with_appropriate_message_when_token_is_expired(
-            self, mock_expire, mock_delete, mock_get, mock_set, init_db,
-            client):
+            self, init_db, client):
         user = UserGenerator.generate_model_obj(save=True)
         token = UserGenerator.generate_token(user,
                                              token_type=RESET_TOKEN,
                                              seconds=-40)
-        mock_get.return_value = token
         new_password = 'some-very-new-password'
         reset_id = 'resetID'
+        RedisMock.set(reset_id, token)
         valid_data = json.dumps({
             'password': new_password,
             'resetId': reset_id,
         })
+        assert RedisMock.get(reset_id) == token
         response = client.patch(CONFIRM_RESET_PASSWORD_ENDPOINT,
                                 data=valid_data,
                                 content_type="application/json")
@@ -383,20 +366,14 @@ class TestConfirmResetPassword:
         assert response_body['message'] == authentication_errors[
             'invalid_reset_link']
 
-        assert mock_get.call_count == 1
-        assert mock_delete.call_count == 1
-        assert not mock_expire.called
-        assert mock_set.called is False
-        assert mock_delete.call_args[0][0] == reset_id
+        assert RedisMock.get(reset_id) is None  # delete was called
+        assert len(RedisMock.expired_cache) == 0  #  expired  was not called
 
 
-@patch('api.services.redis_util.RedisUtil.REDIS.set', autospec=True)
-@patch('api.services.redis_util.RedisUtil.REDIS.expire', autospec=True)
 @patch('api.utils.emails.EmailUtil.SEND_CLIENT.send', autospec=True)
 class TestResetPassword:
     def test_user_should_be_able_to_make_reset_request_when_account_exists(
-            self, mock_send, mock_redis_expire, mock_redis_set, init_db,
-            client):
+            self, mock_send, init_db, client):
         from api.utils.emails import EmailUtil
         EmailUtil.send_mail_as_html.delay = Mock(
             side_effect=EmailUtil.send_mail_as_html)
@@ -406,20 +383,24 @@ class TestResetPassword:
             'email': user.email,
             'redirectURL': redirect_url,
         })
+        RedisMock.flush_all()
         response = client.patch(RESET_PASSWORD_ENDPOINT,
                                 data=valid_data,
                                 content_type="application/json")
 
         assert EmailUtil.send_mail_as_html.delay.called
-        assert mock_redis_set.call_count == mock_redis_expire.called == 1
+        assert len(RedisMock.expired_cache) == len(
+            RedisMock.cache) == 1  # expired and set were called once
         html_to_check_for = '<h1>Reset Account</h1>'
         assert_successful_response(response,
                                    RESET_PASS_MAIL.format(user.email))
         html_content = assert_send_grid_mock_send(mock_send, user.email)
 
+        set_key = list(RedisMock.cache.keys())[0]
+        reset_id = list(RedisMock.expired_cache.keys())[0]
+        exp_duration = RedisMock.expired_cache[reset_id]
+        token = RedisMock.get(set_key)
         # Extracting token from HTML content
-        set_key, token = mock_redis_set.call_args[0]
-        reset_id, exp_duration = mock_redis_expire.call_args[0]
         decoded = TokenValidator.decode_token(token, RESET_TOKEN)
         decoded_data = decoded['data']
 
@@ -436,8 +417,8 @@ class TestResetPassword:
         assert decoded['exp'] - decoded['iat'] == 15 * 60
 
     def test_should_return_appropriate_error_when_email_is_not_found(
-            self, mock_send, mock_redis_expire, mock_redis_set, init_db,
-            client):
+            self, mock_send, init_db, client):
+        RedisMock.flush_all()
         invalid_data = json.dumps({
             'email': 'some-random-email@email.com',
             'redirectURL': fake.url(),
@@ -452,11 +433,11 @@ class TestResetPassword:
             'email_not_found']
         assert response_body['status'] == 'error'
         assert not mock_send.called
-        assert mock_redis_expire.called == mock_redis_set.called == mock_send.called
+        assert len(RedisMock.expired_cache) == len(RedisMock.cache) == 0
 
     def test_should_fail_when_redirect_url_is_not_provided(
-            self, mock_send, mock_redis_expire, mock_redis_set, init_db,
-            client):
+            self, mock_send, init_db, client):
+        RedisMock.flush_all()
         user = UserGenerator.generate_model_obj(save=True)
         invalid_data = json.dumps({
             'email': user.email,
@@ -472,17 +453,15 @@ class TestResetPassword:
         assert 'redirectURL' in response_body['errors']
         assert response_body['status'] == 'error'
         assert not mock_send.called
-        assert mock_redis_expire.called == mock_redis_set.called == mock_send.called
+        assert len(RedisMock.expired_cache) == len(RedisMock.cache) == 0
 
 
-@patch('api.services.redis_util.RedisUtil.REDIS.set', autospec=True)
-@patch('api.services.redis_util.RedisUtil.REDIS.expire', autospec=True)
 @patch('api.utils.emails.EmailUtil.SEND_CLIENT.send', autospec=True)
 class TestRegisterEndpoint:
     def test_new_user_should_register_successfully_when_valid_data_is_provided_and_should_be_added_to_the_db(
-            self, mock_send, mock_redis_expire, mock_redis_set, init_db,
-            client):
+            self, mock_send, init_db, client):
         from api.utils.emails import EmailUtil
+        RedisMock.flush_all()
         EmailUtil.send_mail_as_html.delay = Mock(
             side_effect=EmailUtil.send_mail_as_html)
         valid_user_dict = UserGenerator.generate_api_input_data()
@@ -501,10 +480,12 @@ class TestRegisterEndpoint:
         html_content = assert_send_grid_mock_send(mock_send, user.email)
 
         # Check redis interactions
-        assert mock_redis_set.called == mock_redis_expire.called
-        assert mock_redis_set.called is True
-        key, token = mock_redis_set.call_args[0]
-        exp_key, exp_time = mock_redis_expire.call_args[0]
+        assert len(RedisMock.expired_cache) == len(RedisMock.cache) == 1
+
+        key = list(RedisMock.cache.keys())[0]
+        token = RedisMock.cache.get(key)
+        exp_key = list(RedisMock.expired_cache.keys())[0]
+        exp_time = RedisMock.expired_cache.get(exp_key)
 
         assert key == exp_key
         assert exp_time == 14.5 * 60
@@ -513,8 +494,7 @@ class TestRegisterEndpoint:
             html_content, valid_user_dict['redirectURL'], user, token, key)
 
     def test_attempt_to_register_user_with_invalid_data_should_fail(
-            self, mock_send, mock_redis_expire, mock_redis_set, init_db,
-            client):
+            self, mock_send, init_db, client):
         invalid_user_json = UserGenerator.generate_api_input_data()
         invalid_user_json.update(email='Invalid stuff',
                                  firstName='^*&*&&*^',
@@ -534,11 +514,10 @@ class TestRegisterEndpoint:
         assert 'email' in response_body['errors']
 
         assert mock_send.called is False
-        assert mock_send.called == mock_redis_set.called == mock_redis_expire.called
+        assert len(RedisMock.expired_cache) == len(RedisMock.cache) == 1
 
     def test_attempt_to_register_user_with_first_name_or_last_name_gt_20_should_fail(
-            self, mock_send, mock_redis_expire, mock_redis_set, init_db,
-            client):
+            self, mock_send, init_db, client):
         invalid_user_json = UserGenerator.generate_api_input_data()
         invalid_user_json.update(
             firstName='ThisFirstNameIsGreaterThan20CharactersWhatAName',
@@ -561,11 +540,10 @@ class TestRegisterEndpoint:
             'max_length_error'].format(20)
 
         assert mock_send.called is False
-        assert mock_send.called == mock_redis_set.called == mock_redis_expire.called
+        assert len(RedisMock.expired_cache) == len(RedisMock.cache) == 1
 
     def test_attempt_to_register_user_with_first_name_or_last_name_lt_3_chars_should_fail(
-            self, mock_send, mock_redis_expire, mock_redis_set, init_db,
-            client):
+            self, mock_send, init_db, client):
         invalid_user_json = UserGenerator.generate_api_input_data()
         invalid_user_json.update(
             firstName='a',
@@ -588,11 +566,10 @@ class TestRegisterEndpoint:
             'min_length_error'].format(3)
 
         assert mock_send.called is False
-        assert mock_send.called == mock_redis_set.called == mock_redis_expire.called
+        assert len(RedisMock.expired_cache) == len(RedisMock.cache) == 1
 
     def test_attempt_to_register_a_user_with_existing_email_should_fail(
-            self, mock_send, mock_redis_set, mock_redis_expire, init_db,
-            client):
+            self, mock_send, init_db, client):
         valid_user_obj = UserGenerator.generate_model_obj(save=True)
         user_data = {
             'username': 'someotherusername',
@@ -613,4 +590,4 @@ class TestRegisterEndpoint:
         assert response_body['message'] == serialization_error[
             'already_exists'].format('`email` or `username`')
         assert mock_send.called is False
-        assert mock_send.called == mock_redis_set.called == mock_redis_expire.called
+        assert len(RedisMock.expired_cache) == len(RedisMock.cache) == 1

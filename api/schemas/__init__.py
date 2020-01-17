@@ -7,3 +7,4 @@ from .membership import (OrganisationMembership as
                          UserMembershipSchema, OrgAndMembershipSchema)
 from .unit import Unit as UnitSchema
 from .parameter import Parameter as ParameterSchema
+from .role import Role as RoleSchema

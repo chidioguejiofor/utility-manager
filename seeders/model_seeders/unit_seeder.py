@@ -50,9 +50,6 @@ class UnitSeed(BaseSeeder):
 
         return filter_obj
 
-    def __lt__(self, other):
-        return False
-
     def __repr__(self):
         return "%s(name=%r, greek_symbol_num=%r, letter_symbol=%s, created_at=%s, updated_at=%s)" % (
             self.__class__.__name__,

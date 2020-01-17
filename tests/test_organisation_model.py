@@ -2,7 +2,7 @@ import pytest
 from .mocks.user import UserGenerator
 from .mocks.organisation import OrganisationGenerator
 from api.utils.error_messages import serialization_error
-from api.models import Organisation, Membership, RoleEnum
+from api.models import Organisation, Membership, Role
 from api.schemas import OrganisationSchema as Schema, OrganisationMembershipSchema
 from marshmallow import ValidationError
 from api.utils.exceptions import UniqueConstraintException
@@ -75,7 +75,7 @@ class TestOrganisationSerializer:
         assert len(dumped_data['memberships']) == 1
         assert dumped_data['name'] == valid_org.name
         assert dumped_data['website'] == valid_org.website
-        assert dumped_data['memberships'][0]['role'] == 'OWNER'
+        assert dumped_data['memberships'][0]['role']['name'] == 'OWNER'
         assert dumped_data['memberships'][0]['id'] == membership.id
 
 
@@ -115,4 +115,4 @@ class TestOrganisationModel:
         assert member.first_name == valid_user_obj.first_name
         assert member.last_name == valid_user_obj.last_name
         assert member.password_hash == valid_user_obj.password_hash
-        assert membership.role == RoleEnum.OWNER
+        assert membership.role.name == 'OWNER'

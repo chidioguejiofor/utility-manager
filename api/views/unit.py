@@ -1,10 +1,11 @@
 from .base import BaseView, FilterByQueryMixin
 from settings import endpoint
 from flask import request
-from api.models import Unit, Membership, RoleEnum
+from api.models import Unit, Membership
 from api.schemas import UnitSchema
 from api.utils.exceptions import MessageOnlyResponseException
 from api.utils.success_messages import CREATED, RETRIEVED
+from api.services.redis_util import RedisUtil
 from api.utils.error_messages import serialization_error
 
 
@@ -54,7 +55,12 @@ class UnitView(BaseView, FilterByQueryMixin):
                 message=serialization_error['not_found'].format(
                     'Organisation'))
 
-        if membership.role not in [RoleEnum.OWNER, RoleEnum.ENGINEER]:
+        allowed_rows = [
+            RedisUtil.get_role_id('OWNER'),
+            RedisUtil.get_role_id('ENGINEER'),
+            RedisUtil.get_role_id('ADMIN'),
+        ]
+        if membership.role.id not in allowed_rows:
             raise MessageOnlyResponseException(
                 status_code=403, message=serialization_error['not_an_admin'])
 

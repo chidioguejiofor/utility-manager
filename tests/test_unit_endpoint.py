@@ -1,6 +1,6 @@
 import math
 import json
-from api.models import Unit, Membership
+from api.models import Unit, Membership, Role
 from api.utils.error_messages import serialization_error
 from api.utils.success_messages import CREATED, RETRIEVED
 from .mocks.user import UserGenerator
@@ -84,9 +84,12 @@ class TestCreateUnitEndpoint:
 
     def test_unit_should_not_be_created_if_the_user_is_not_an_admin_in_this_organisation(
             self, app, init_db, client, saved_org_and_user_generator):
+        regular_role = Role.query.filter_by(name='REGULAR USERS').first().id
         user, org = saved_org_and_user_generator
         user = UserGenerator.generate_model_obj(save=True, verified=True)
-        Membership(user_id=user.id, organisation_id=org.id).save()
+        Membership(user_id=user.id,
+                   organisation_id=org.id,
+                   role_id=regular_role).save()
         unit_json = {
             'name': 'Joules2',
             'letterSymbol': 'J',

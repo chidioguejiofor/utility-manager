@@ -16,7 +16,7 @@ class EmailUtil:
 
     @staticmethod
     @celery_app.task(name='send-email-to-user-as-html')
-    def send_mail_as_html(subject, receivers, html):
+    def send_mail_as_html(subject, receivers, html, blind_copies=None):
         """Sends mail as html
 
         Args:
@@ -32,6 +32,9 @@ class EmailUtil:
                        to_emails=receivers,
                        subject=subject,
                        html_content=html)
+        blind_copies = blind_copies if blind_copies else []
+        for bcc in blind_copies:
+            message.add_bcc(bcc)
         try:
             EmailUtil.SEND_CLIENT.send(message)
         except Exception as e:

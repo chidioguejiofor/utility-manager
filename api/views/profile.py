@@ -5,7 +5,7 @@ from api.schemas import UserSchema, ProfileSchema
 from api.utils.success_messages import RETRIEVED, UPDATED
 from api.utils.error_messages import serialization_error
 from api.models import User
-from api.utils.exceptions import MessageOnlyResponseException
+from api.utils.exceptions import ResponseException
 
 
 @endpoint('/user/profile')
@@ -41,8 +41,7 @@ class Profile(BaseView, CookieGeneratorMixin):
         if update_dict:
             user_to_update.update()
         else:
-            raise MessageOnlyResponseException(
-                serialization_error['empty_update_data'])
+            raise ResponseException(serialization_error['empty_update_data'])
 
         user_data = UserSchema().dump_success_data(user_to_update,
                                                    UPDATED.format("Profile"))

@@ -4,7 +4,7 @@ from settings import endpoint
 from flask import request
 
 from api.utils.error_messages import serialization_error, authentication_errors
-from api.utils.exceptions import MessageOnlyResponseException
+from api.utils.exceptions import ResponseException
 from api.utils.token_validator import TokenValidator
 from api.models import User
 from api.schemas import ResetPasswordSchema, CompleteResetPasswordSchema
@@ -22,8 +22,8 @@ class ResetPassword(BaseView):
 
         user = User.query.filter_by(email=obj.email).first()
         if not user:
-            raise MessageOnlyResponseException(
-                serialization_error['email_not_found'], 404)
+            raise ResponseException(serialization_error['email_not_found'],
+                                    404)
         EmailUtil.send_verification_email_to_user(
             user,
             token_type=RESET_TOKEN,
@@ -45,7 +45,7 @@ class ConfirmResetPassword(BaseView):
         try:
             token_data = TokenValidator.decode_token_data(token, RESET_TOKEN)
         except jwt.exceptions.PyJWTError:
-            raise MessageOnlyResponseException(
+            raise ResponseException(
                 authentication_errors['invalid_reset_link'], 400)
         finally:
             if token:

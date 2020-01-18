@@ -1,7 +1,7 @@
 import os
 import jwt
 from datetime import datetime, timedelta
-from api.utils.exceptions import MessageOnlyResponseException
+from api.utils.exceptions import ResponseException
 from api.utils.error_messages import authentication_errors
 
 

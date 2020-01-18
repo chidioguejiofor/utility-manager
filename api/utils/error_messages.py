@@ -68,3 +68,12 @@ model_operations = {
         'Only one of `letterSymbol` or `greekSymbol` should have a value not both',
     )
 }
+
+invitation_errors = {
+    'invites_already_sent_to_email':
+    'This email has already been sent invitation',
+    'duplicate_email_in_request':
+    'This email was specified more that once in this request',
+    'missing_role_ids': 'Some role IDs you specified do not exist',
+    'cannot_add_role': "You don't have permission to invite a {}."
+}

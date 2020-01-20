@@ -3,7 +3,7 @@ import os
 import numpy as np
 from flask_restplus import Resource
 from flask import request
-from api.utils.exceptions import MessageOnlyResponseException
+from api.utils.exceptions import ResponseException
 from api.utils.token_validator import TokenValidator
 from api.utils.error_messages import authentication_errors
 from api.utils.constants import LOGIN_TOKEN
@@ -29,14 +29,14 @@ class Authentication:
         """
         token = request.cookies.get('token')
         if not token:
-            raise MessageOnlyResponseException(
+            raise ResponseException(
                 authentication_errors['missing_token'],
                 401,
             )
         decoded_data = TokenValidator.decode_token_data(token,
                                                         token_type=LOGIN_TOKEN)
         if check_user_is_verified and not decoded_data['verified']:
-            raise MessageOnlyResponseException(
+            raise ResponseException(
                 authentication_errors['unverified_user'],
                 403,
             )

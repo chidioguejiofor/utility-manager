@@ -3,6 +3,7 @@ from api.utils.time_util import TimeUtil
 from api.utils.error_messages import serialization_error
 from api.utils.exceptions import UniqueConstraintException
 from sqlalchemy.ext.declarative import declared_attr, AbstractConcreteBase
+from sqlalchemy import exc
 import numpy as np
 from .id_generator import IDGenerator
 
@@ -126,7 +127,35 @@ class BaseModel(db.Model):
         return query.update(kwargs)
 
     @classmethod
-    def bulk_create(cls, iterable):
+    def bulk_create_or_none(cls, iterable, *args, **kwargs):
+        """Performs a bulk_create and returns the objects that were created or None if an error occurs.
+
+        It automatically calls a db.session.rollback if an error occurs
+
+        Args:
+            iterable:
+            *args:
+            **kwargs:
+
+        Returns:
+
+        """
+        try:
+            return cls.bulk_create(iterable, *args, **kwargs)
+        except exc.IntegrityError as e:
+            db.session.rollback()
+            return None
+
+    @classmethod
+    def before_bulk_create(cls, iterable, *args, **kwargs):
+        pass
+
+    @classmethod
+    def after_bulk_create(cls, model_objs, *args, **kwargs):
+        pass
+
+    @classmethod
+    def bulk_create(cls, iterable, *args, **kwargs):
         """Inserts bulk data into the database using an iterable
         
         Args:
@@ -136,6 +165,7 @@ class BaseModel(db.Model):
         Returns:
             None: Inserts the data and returns nothing
         """
+        cls.before_bulk_create(iterable, *args, **kwargs)
         model_objs = []
         for data in iterable:
             if not isinstance(data, cls):
@@ -144,7 +174,9 @@ class BaseModel(db.Model):
             model_objs.append(data)
 
         db.session.bulk_save_objects(model_objs)
-        db.session.commit()
+        if kwargs.get('commit', True) is True:
+            db.session.commit()
+        cls.after_bulk_create(model_objs, *args, **kwargs)
         return model_objs
 
 

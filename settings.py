@@ -3,7 +3,7 @@ from flask_restplus import Api
 from sqlalchemy import event
 from api.utils.time_util import TimeUtil
 from api.utils.error_messages import serialization_error, authentication_errors
-from api.utils.exceptions import UniqueConstraintException, MessageOnlyResponseException, ModelOperationException
+from api.utils.exceptions import UniqueConstraintException, ResponseException, ModelOperationException
 from api.utils.constants import CELERY_TASKS
 import os
 from flask import Blueprint
@@ -88,18 +88,25 @@ def add_id_event_to_models(tables_in_my_app):
 def create_error_handlers(app):
     @app.errorhandler(ValidationError)
     def handle_errors(error):
+        if '_schema' in error.messages:
+            error.messages = error.messages['_schema']
         return {
             'status': 'error',
             'errors': error.messages,
             'message': serialization_error['invalid_field_data']
         }, 400
 
-    @app.errorhandler(MessageOnlyResponseException)
+    @app.errorhandler(ResponseException)
     def handle_errors(error):
-        return {
+        error_dict = {
             'status': 'error',
             'message': error.message,
-        }, error.status_code
+        }
+
+        if error.errors:
+            error_dict['errors'] = error.errors
+
+        return error_dict, error.status_code
 
     @app.errorhandler(ModelOperationException)
     def handle_errors(error):
@@ -158,6 +165,11 @@ def create_app(current_env=os.getenv('FLASK_ENV', 'production')):
     if current_env == 'production':
         origins = ['https://utility-manager-frontend.herokuapp.com']
 
+    if current_env == 'development':
+        import logging
+        logging.basicConfig()
+        logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+
     CORS(app, origins=origins, supports_credentials=True)
     app.config.from_object(env_mapper[current_env])
     api = Api(app)
@@ -179,10 +191,15 @@ def create_app(current_env=os.getenv('FLASK_ENV', 'production')):
 
     @app.shell_context_processor
     def make_shell_context():
-        return {
+        import api.schemas as schemas
+        object_dicts = {
             model_name: model_obj
             for model_name, model_obj in inspect.getmembers(
                 models, inspect.isclass)
         }
+        for schema_name, schema_obj in inspect.getmembers(
+                models, inspect.isclass):
+            object_dicts[schema_name] = schema_obj
+        return object_dicts
 
     return app

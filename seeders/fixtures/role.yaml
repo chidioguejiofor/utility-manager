@@ -1,17 +1,22 @@
-- created_at: 2020-01-15 21:25:11.262553+01:00
+- created_at: 2020-01-15 20:25:11.262553
   description: The admin is second only to the owner of the organisation
   name: ADMIN
   updated_at: null
-- created_at: 2020-01-15 21:25:11.263149+01:00
+- created_at: 2020-01-15 20:25:11.263149
   description: This represents the owner of the organisation
   name: OWNER
   updated_at: null
-- created_at: 2020-01-15 21:25:11.263318+01:00
+- created_at: 2020-01-15 20:25:11.263318
   description: An engineer should be allowed to do things like logging but should
     not be able to invite users to the organistion
   name: ENGINEER
   updated_at: null
-- created_at: 2020-01-15 21:25:11.263484+01:00
+- created_at: 2020-01-15 20:25:11.263484
   description: This represents non engineering members of the organisation
   name: REGULAR USERS
+  updated_at: null
+- created_at: 2020-01-19 12:55:07.094253+01:00
+  description: The manager should be given permissions on everything related to working
+    with engineers
+  name: MANAGER
   updated_at: null

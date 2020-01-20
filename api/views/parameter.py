@@ -4,7 +4,7 @@ from flask import request
 from api.models import Membership
 from api.services.redis_util import RedisUtil
 from api.schemas import ParameterSchema
-from api.utils.exceptions import MessageOnlyResponseException
+from api.utils.exceptions import ResponseException
 from api.utils.success_messages import CREATED
 from api.utils.error_messages import serialization_error, authentication_errors
 
@@ -19,7 +19,7 @@ class CreateParameter(BaseView):
             (Membership.user_id == user_data['id'])
             & (Membership.organisation_id == org_id)).first()
         if not user_org_membership:
-            raise MessageOnlyResponseException(
+            raise ResponseException(
                 message=serialization_error['not_found'].format(
                     'Organisation'),
                 status_code=404,
@@ -29,7 +29,7 @@ class CreateParameter(BaseView):
             RedisUtil.get_role_id('OWNER'),
         ]
         if user_org_membership.role.id not in allowed_roles:
-            raise MessageOnlyResponseException(
+            raise ResponseException(
                 message=authentication_errors['forbidden'].format(
                     'create a parameter'),
                 status_code=403,

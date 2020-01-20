@@ -3,7 +3,7 @@ from settings import endpoint
 from flask import request
 from api.models import Unit, Membership
 from api.schemas import UnitSchema
-from api.utils.exceptions import MessageOnlyResponseException
+from api.utils.exceptions import ResponseException
 from api.utils.success_messages import CREATED, RETRIEVED
 from api.services.redis_util import RedisUtil
 from api.utils.error_messages import serialization_error
@@ -50,7 +50,7 @@ class UnitView(BaseView, FilterByQueryMixin):
             organisation_id=org_id,
         ).first()
         if not membership:
-            raise MessageOnlyResponseException(
+            raise ResponseException(
                 status_code=404,
                 message=serialization_error['not_found'].format(
                     'Organisation'))
@@ -61,7 +61,7 @@ class UnitView(BaseView, FilterByQueryMixin):
             RedisUtil.get_role_id('ADMIN'),
         ]
         if membership.role.id not in allowed_rows:
-            raise MessageOnlyResponseException(
+            raise ResponseException(
                 status_code=403, message=serialization_error['not_an_admin'])
 
         unit_already_exists = Unit.query.filter_by(
@@ -71,8 +71,8 @@ class UnitView(BaseView, FilterByQueryMixin):
             organisation_id=None,
         ).count()
         if unit_already_exists:
-            raise MessageOnlyResponseException(
-                status_code=400, message=Unit.__unique_violation_msg__)
+            raise ResponseException(status_code=400,
+                                    message=Unit.__unique_violation_msg__)
 
         unit.save()
         unit_data = UnitSchema().dump_success_data(unit,

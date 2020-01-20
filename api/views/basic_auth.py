@@ -5,7 +5,7 @@ from flask import request, redirect, make_response
 
 from api.utils.error_messages import serialization_error, authentication_errors
 from api.utils.success_messages import REG_VERIFIED, CONFIRM_EMAIL_RESENT
-from api.utils.exceptions import MessageOnlyResponseException
+from api.utils.exceptions import ResponseException
 from api.utils.token_validator import TokenValidator
 from api.models import User
 from api.schemas import UserSchema, LoginSchema
@@ -34,14 +34,14 @@ class ResendEmail(BaseView):
         redirect_url = request.get_json().get('redirectURL')
         if not redirect_url or not ('http://' in redirect_url
                                     or 'https://' in redirect_url):
-            raise MessageOnlyResponseException(
+            raise ResponseException(
                 serialization_error['invalid_url'].format('Redirect URL'),
                 status_code=400,
             )
         user = User.query.get(user_data['id'])
         user.redirect_url = redirect_url
         if user.verified:
-            raise MessageOnlyResponseException(
+            raise ResponseException(
                 serialization_error['already_verified'],
                 status_code=400,
             )
@@ -75,7 +75,7 @@ class ConfirmEmail(BaseView, CookieGeneratorMixin):
             redirect_url = f"{token_data['redirect_url']}?success=false&message={message}"
             RedisUtil.delete_key((kwargs.get('confirm_id')))
         except Exception:
-            raise MessageOnlyResponseException(
+            raise ResponseException(
                 serialization_error['invalid_confirmation_link'], 404)
 
         resp = redirect(redirect_url, code=302)
@@ -104,7 +104,7 @@ class Login(BaseView, CookieGeneratorMixin):
             resp.status_code = 200
             return self.generate_cookie(resp, user)
 
-        raise MessageOnlyResponseException(
+        raise ResponseException(
             message=serialization_error['login_failed'],
             status_code=400,
         )

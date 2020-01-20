@@ -11,3 +11,8 @@ CONFIRM_EMAIL_RESENT = 'A confirmation email was sent to `{}`'
 RESET_PASS_MAIL = 'An email with instructions to reset password has been sent to `{}`'
 RETRIEVED = 'Successfully retrieved {}'
 UPDATED = '{} was successfully updated'
+INVITING_USER_MSG_DICT = {
+    'error': 'No invitation was sent',
+    'partial': 'Some invitations were sent and some failed',
+    'success': 'All invitations were sent successfully',
+}

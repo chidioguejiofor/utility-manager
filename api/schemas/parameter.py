@@ -1,7 +1,7 @@
 from .base import AbstractSchemaWithTimeStampsMixin, AlphanumericField, BaseSchema, StringField
 from marshmallow import fields, post_load
 from api.utils.error_messages import parameter_errors
-from api.utils.exceptions import MessageOnlyResponseException
+from api.utils.exceptions import ResponseException
 from marshmallow_enum import EnumField
 from ..models import Parameter as ParameterModel, ValueTypeEnum
 from .user import User
@@ -36,7 +36,7 @@ class Parameter(AbstractSchemaWithTimeStampsMixin, BaseSchema):
 
     def _error_msg_generator(self, should_throw_error, err_key, *args):
         if should_throw_error:
-            raise MessageOnlyResponseException(
+            raise ResponseException(
                 message=parameter_errors[err_key].format(*args),
                 status_code=400,
             )

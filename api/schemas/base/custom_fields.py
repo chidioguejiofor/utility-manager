@@ -64,6 +64,11 @@ b
         return des_value.capitalize() if self.capitalize else des_value
 
 
+class IDField(StringField):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, max_length=21, **kwargs)
+
+
 class RegexField(StringField):
     def __init__(self, regex, regex_message, *args, **kwargs):
         validations = kwargs.get('validate', [])
@@ -125,3 +130,15 @@ class ImageField(fields.Raw):
                     message=serialization_error['invalid_image'])
 
         return [_validator]
+
+
+class ListField(fields.List):
+    def __init__(
+            self,
+            *args,
+            min_length=1,
+            **kwargs,
+    ):
+        validate = (kwargs.get('validate', []) +
+                    FieldValidator._get_min_length_validator(min_length))
+        super().__init__(*args, validate=validate, **kwargs)

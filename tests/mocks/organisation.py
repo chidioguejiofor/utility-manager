@@ -16,7 +16,7 @@ class OrganisationGenerator(BaseGenerator):
         }
 
     @classmethod
-    def generate_model_obj_dict(cls, creator_id=None, verify_user=False):
+    def generate_model_obj_dict(cls, creator_id=None, verify_user=True):
         if not creator_id:
             creator_id = UserGenerator.generate_model_obj(
                 save=True, verified=verify_user).id

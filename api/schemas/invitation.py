@@ -1,5 +1,6 @@
 from marshmallow import fields, post_load, ValidationError
 from .role import Role
+from .organisation import Organisation
 from .base import (AbstractSchemaWithTimeStampsMixin, IDField, BaseSchema,
                    StringField, ListField)
 from api.utils.error_messages import invitation_errors
@@ -13,6 +14,8 @@ class Invitation(AbstractSchemaWithTimeStampsMixin, BaseSchema):
     role = fields.Nested(Role)
     user_dashboard_url = StringField(data_key='userDashboardURL')
     signup_url = StringField(data_key='signupURL')
+    organisation = fields.Nested(
+        Organisation(exclude=['creator', 'subscription_type']))
 
 
 class InviteUserSchema(BaseSchema):

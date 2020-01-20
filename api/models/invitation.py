@@ -15,6 +15,7 @@ class Invitation(BaseModel):
                                               ondelete='CASCADE'),
                                 nullable=False)
     role = db.relationship('Role')
+    organisation = db.relationship('Organisation')
 
     __unique_constraints__ = ((('email', 'organisation_id'),
                                'invitation_email_org_constraint'), )

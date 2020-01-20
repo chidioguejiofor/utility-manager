@@ -1,7 +1,7 @@
 from .base import BaseView, FilterByQueryMixin
 from settings import endpoint
 from flask import request
-from api.schemas import RoleSchema, InvitationSchema
+from api.schemas import RoleSchema
 from api.models import Membership, Role
 from api.utils.exceptions import ResponseException
 from api.utils.success_messages import RETRIEVED

@@ -3,10 +3,10 @@ from api.models import Membership, Role, Invitation, db
 from api.utils.constants import APP_EMAIL
 from api.utils.error_messages import serialization_error, invitation_errors, authentication_errors
 from api.utils.success_messages import INVITING_USER_MSG_DICT
-from .mocks.user import UserGenerator
-from .mocks.redis import RedisMock
-from .mocks.organisation import OrganisationGenerator
-from .assertions import assert_send_grid_mock_send
+from tests.mocks.user import UserGenerator
+from tests.mocks.redis import RedisMock
+from tests.mocks.organisation import OrganisationGenerator
+from tests.assertions import assert_send_grid_mock_send
 import json
 
 INVITATION_URL = '/api/org/{}/invitations'

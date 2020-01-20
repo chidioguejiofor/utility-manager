@@ -1,21 +1,66 @@
-from .base import BaseView
+from .base import BaseView, FilterByQueryMixin
 from settings import endpoint
 from flask import request
 from api.schemas import InvitationRequestSchema, InvitationSchema
 from api.models import Membership, Invitation, db
 from api.utils.exceptions import ResponseException
-from api.utils.success_messages import INVITING_USER_MSG_DICT
+from api.utils.success_messages import INVITING_USER_MSG_DICT, RETRIEVED
 from api.utils.error_messages import invitation_errors, authentication_errors, serialization_error
 from api.services.redis_util import RedisUtil
 from sqlalchemy import exc, orm
 
 
 @endpoint('/org/<string:org_id>/invitations')
-class OrgInvitations(BaseView):
+class OrgInvitations(BaseView, FilterByQueryMixin):
+    __model__ = Invitation
     protected_methods = ['POST', 'GET']
+    SEARCH_FILTER_ARGS = {
+        'role_id': {
+            'filter_type': 'ilike'
+        },
+        'email': {
+            'filter_type': 'ilike'
+        },
+    }
+
+    SORT_KWARGS = {
+        'defaults': 'created_at',
+        'sort_fields': {'created_at', 'role_id'}
+    }
 
     def get(self, user_data, org_id):
-        pass
+        membership = Membership.query.options(
+            orm.joinedload('role'), orm.joinedload('organisation'),
+            orm.joinedload('member')).filter_by(
+                organisation_id=org_id, user_id=user_data['id']).first()
+
+        if not membership:
+            raise ResponseException(
+                message=serialization_error['not_found'].format(
+                    'Organisation id'),
+                status_code=404,
+            )
+
+        if membership.role.name not in ['OWNER', 'ADMIN']:
+            raise ResponseException(
+                message=authentication_errors['forbidden'].format(
+                    'access this'),
+                status_code=403,
+            )
+        query_params = request.args
+        query = self.search_model(query_params)
+        query = query.options(
+            orm.joinedload('role'), ).filter_by(organisation_id=org_id)
+        page_query, meta = self.paginate_query(query, query_params)
+        fields_to_exclude = [
+            'role_id', 'user_dashboard_url', 'signup_url', 'organisation'
+        ]
+        data = InvitationSchema(many=True,
+                                exclude=fields_to_exclude).dump_success_data(
+                                    page_query,
+                                    message=RETRIEVED.format('Invitations'))
+        data['meta'] = meta
+        return data, 200
 
     def post(self, user_data, org_id):
         membership = Membership.query.options(
@@ -74,7 +119,8 @@ class OrgInvitations(BaseView):
                 status_code=404,
             )
         res_data = InvitationSchema(many=True,
-                                    exclude=['role']).dump(invitations)
+                                    exclude=['role',
+                                             'organisation']).dump(invitations)
         return self.generate_response(list_of_existing_emails, list_of_models,
                                       res_data)
 
@@ -125,17 +171,46 @@ class OrgInvitations(BaseView):
         return roles_not_allowed
 
 
+@endpoint('/user/invitations')
+class UserInvitationsView(BaseView, FilterByQueryMixin):
+    __model__ = Invitation
+    protected_methods = ['GET']
+    SEARCH_FILTER_ARGS = {
+        'role_id': {
+            'filter_type': 'ilike'
+        },
+    }
+
+    SORT_KWARGS = {'defaults': 'created_at', 'sort_fields': {'created_at'}}
+
+    def get(self, user_data):
+        query_params = request.args
+        query = self.search_model(query_params)
+        query = query.options(
+            orm.joinedload('organisation'),
+            orm.joinedload('role'),
+        ).filter_by(email=user_data['email'], )
+        page_query, meta = self.paginate_query(query, query_params)
+        fields_to_exclude = ['role_id', 'user_dashboard_url', 'signup_url']
+        data = InvitationSchema(many=True,
+                                exclude=fields_to_exclude).dump_success_data(
+                                    page_query,
+                                    message=RETRIEVED.format('Invitations'))
+        data['meta'] = meta
+        return data, 200
+
+
 @endpoint('/org/<string:org_id>/invitations/<string:invitation_id>/resend')
 class ResendInvitation(BaseView):
-    protected_methods = ['POST', 'GET']
+    protected_methods = ['POST']
 
     def post(self, user_data):
         pass
 
 
-@endpoint('/org/<string:org_id>/invitations/accept')
+@endpoint('/user/invitations/<string:invitation_id>/accept')
 class AcceptInvitation(BaseView):
-    protected_methods = ['POST', 'GET']
+    protected_methods = ['POST']
 
-    def post(self, user_data):
+    def post(self, user_data, invitation_id):
         pass

@@ -16,6 +16,12 @@ class OrganisationMembership(Organisation):
     memberships = fields.Nested(_OrgMembershipSchema, many=True)
 
 
+class MembershipIDOnlySchema(BaseSchema):
+    role_id = StringField(data_key='roleId')
+    organisation_id = StringField(data_key='organisationId')
+    user_id = StringField(data_key='userId')
+
+
 class OrgAndMembershipSchema(BaseSchema):
     from .organisation import Organisation as OrganisationSchema
     organisation = fields.Nested(OrganisationSchema(exclude=['creator']))

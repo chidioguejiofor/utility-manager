@@ -1,10 +1,12 @@
 from .base import BaseView, FilterByQueryMixin
 from settings import endpoint
 from flask import request
-from api.schemas import InvitationRequestSchema, InvitationSchema
+from api.schemas import (InvitationRequestSchema, InvitationSchema,
+                         MembershipIDOnlySchema,
+                         InvitationRequestWithoutInvitesSchema)
 from api.models import Membership, Invitation, db
 from api.utils.exceptions import ResponseException
-from api.utils.success_messages import INVITING_USER_MSG_DICT, RETRIEVED
+from api.utils.success_messages import INVITING_USER_MSG_DICT, RETRIEVED, ADDED_TO_ORG
 from api.utils.error_messages import invitation_errors, authentication_errors, serialization_error
 from api.services.redis_util import RedisUtil
 from sqlalchemy import exc, orm
@@ -171,6 +173,53 @@ class OrgInvitations(BaseView, FilterByQueryMixin):
         return roles_not_allowed
 
 
+@endpoint('/org/<string:org_id>/invitations/<string:invitation_id>/resend')
+class ResendInvitation(BaseView):
+    protected_methods = ['POST']
+
+    def post(self, user_data, invitation_id, org_id):
+        membership = Membership.query.options(
+            orm.joinedload('role'), orm.joinedload('organisation'),
+            orm.joinedload('member')).filter_by(
+                organisation_id=org_id, user_id=user_data['id']).first()
+
+        if not membership:
+            raise ResponseException(
+                message=serialization_error['not_found'].format(
+                    'Organisation id'),
+                status_code=404,
+            )
+
+        if membership.role.name not in ['OWNER', 'ADMIN']:
+            raise ResponseException(
+                message=authentication_errors['forbidden'].format(
+                    'access this'),
+                status_code=403,
+            )
+
+        invitation = Invitation.query.filter_by(
+            id=invitation_id,
+            organisation_id=org_id,
+        ).first()
+
+        if not invitation:
+            raise ResponseException(
+                message=serialization_error['not_found'].format('Invitation'),
+                status_code=404,
+            )
+
+        invitation_requests = InvitationRequestWithoutInvitesSchema().load(
+            request.get_json())
+
+        Invitation.send_email_to_users(
+            dashboard_url=invitation_requests['user_dashboard_url'],
+            signup_url=invitation_requests['signup_url'],
+            inviter_membership=membership,
+            emails=[invitation.email])
+
+        return {'status': 'success', 'message': 'Invitation was re-sent.'}, 202
+
+
 @endpoint('/user/invitations')
 class UserInvitationsView(BaseView, FilterByQueryMixin):
     __model__ = Invitation
@@ -200,17 +249,29 @@ class UserInvitationsView(BaseView, FilterByQueryMixin):
         return data, 200
 
 
-@endpoint('/org/<string:org_id>/invitations/<string:invitation_id>/resend')
-class ResendInvitation(BaseView):
-    protected_methods = ['POST']
-
-    def post(self, user_data):
-        pass
-
-
 @endpoint('/user/invitations/<string:invitation_id>/accept')
 class AcceptInvitation(BaseView):
     protected_methods = ['POST']
 
     def post(self, user_data, invitation_id):
-        pass
+
+        invitation = Invitation.query.options(
+            orm.joinedload('role'), orm.joinedload('organisation')).filter_by(
+                email=user_data['email'],
+                id=invitation_id,
+            ).first()
+        if invitation is None:
+            raise ResponseException(
+                message=serialization_error['not_found'].format('Invitation'),
+                status_code=404,
+            )
+        membersip = Membership(
+            user_id=user_data['id'],
+            role_id=invitation.role.id,
+            organisation_id=invitation.organisation_id,
+        )
+        membersip.save(commit=False, generate_id=True)
+        final_response = MembershipIDOnlySchema(
+            exclude=['user_id']).dump_success_data(membersip, ADDED_TO_ORG)
+        invitation.delete(commit=True)
+        return final_response, 201

@@ -32,14 +32,17 @@ class InviteUserSchema(BaseSchema):
     email = fields.Email(required=True)
 
 
-class InvitationRequestSchema(BaseSchema):
+class InvitationRequestWithoutInvitesSchema(BaseSchema):
+    user_dashboard_url = StringField(required=True,
+                                     data_key='userDashboardURL')
+    signup_url = StringField(required=True, data_key='signupURL')
+
+
+class InvitationRequestSchema(InvitationRequestWithoutInvitesSchema):
     def __init__(self, *args, roles_user_cannot_send_invites=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.roles_user_cannot_send_invites = roles_user_cannot_send_invites
 
-    user_dashboard_url = StringField(required=True,
-                                     data_key='userDashboardURL')
-    signup_url = StringField(required=True, data_key='signupURL')
     invites = ListField(fields.Nested(InviteUserSchema),
                         min_length=1,
                         required=True)

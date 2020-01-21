@@ -16,3 +16,4 @@ INVITING_USER_MSG_DICT = {
     'partial': 'Some invitations were sent and some failed',
     'success': 'All invitations were sent successfully',
 }
+ADDED_TO_ORG = 'Successfully added you to organisation'

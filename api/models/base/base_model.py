@@ -41,7 +41,7 @@ class BaseModel(db.Model):
     def after_save(self, *args, **kwargs):
         pass
 
-    def save(self, commit=True):
+    def save(self, commit=True, generate_id=False):
         """Saves a new model to the session
 
         If commit is True it updates the database with new changes else it saves it just
@@ -52,12 +52,16 @@ class BaseModel(db.Model):
 
         Args:
             commit(bool, optional): If True upates database with model
+            generate_id(bool, optional): If True generates Id in this function else
+            allows auto generate hook to handle it
 
         Raise:
             sqlalchemy.exc.SQLAlchemyError: when any database error occurs
         """
         self.before_save()
         self._valid_unique_constraints(self)
+        if generate_id:
+            self.id = IDGenerator.generate_id()
 
         db.session.add(self)
         if commit:
@@ -145,6 +149,11 @@ class BaseModel(db.Model):
         except exc.IntegrityError as e:
             db.session.rollback()
             return None
+
+    def delete(self, commit=True):
+        db.session.delete(self)
+        if commit:
+            db.session.commit()
 
     @classmethod
     def before_bulk_create(cls, iterable, *args, **kwargs):

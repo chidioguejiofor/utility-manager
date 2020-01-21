@@ -51,15 +51,24 @@ class Invitation(BaseModel):
             dashboard_url: The place to redirect the user would click when he has an account
 
         """
-        from api.utils.emails import EmailUtil
+
         if not model_objs:
             return
         if not send_email:
             if commit is True or commit is None:
                 db.session.commit()
             return
-
         emails = [model_obj.email for model_obj in model_objs]
+        cls.send_email_to_users(dashboard_url, inviter_membership, emails,
+                                signup_url)
+        if commit is True or commit is None:
+            db.session.commit()
+
+    @classmethod
+    def send_email_to_users(cls, dashboard_url, inviter_membership, emails,
+                            signup_url):
+        from api.utils.emails import EmailUtil
+
         mail_kwargs = {
             'organisation_name': inviter_membership.organisation.name,
             'user_first_name': inviter_membership.member.first_name,
@@ -74,5 +83,3 @@ class Invitation(BaseModel):
                                           APP_EMAIL,
                                           html,
                                           blind_copies=emails)
-        if commit is True or commit is None:
-            db.session.commit()

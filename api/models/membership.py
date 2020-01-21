@@ -16,4 +16,5 @@ class Membership(BaseModel):
     member = db.relationship("User", back_populates="memberships")
     organisation = db.relationship('Organisation',
                                    back_populates='memberships')
-    __table_args__ = (db.UniqueConstraint('user_id', 'organisation_id'), )
+    __unique_constraints__ = ((('user_id', 'organisation_id'),
+                               'membership_user_id_organisation_id_key'), )

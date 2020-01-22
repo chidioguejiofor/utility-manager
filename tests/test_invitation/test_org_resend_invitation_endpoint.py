@@ -18,11 +18,8 @@ INVITE_KEY = 'invites'
 @patch('api.utils.emails.EmailUtil.SEND_CLIENT.send', autospec=True)
 class TestAdminResendInvitation:
     def test_admin_should_be_able_to_resend_invitations(
-            self, mock_email_send, init_db, client,
+            self, mock_email_send, init_db, mock_send_html_delay, client,
             saved_organisation_invitations):
-        from api.utils.emails import EmailUtil
-        EmailUtil.send_mail_as_html.delay = Mock(
-            side_effect=EmailUtil.send_mail_as_html)
         user_objs, org, user_ids, invitations, regular_user_id = \
             saved_organisation_invitations(1)
 
@@ -42,12 +39,10 @@ class TestAdminResendInvitation:
         assert response_body['status'] == 'success'
         assert response_body['message'] == 'Invitation was re-sent.'
 
-        assert EmailUtil.send_mail_as_html.delay.called
+        assert mock_send_html_delay.called
 
-        subject, receivers, html = EmailUtil.send_mail_as_html.delay.call_args[
-            0]
-        blind_copies = EmailUtil.send_mail_as_html.delay.call_args[1][
-            'blind_copies']
+        subject, receivers, html = mock_send_html_delay.call_args[0]
+        blind_copies = mock_send_html_delay.call_args[1]['blind_copies']
 
         assert_send_grid_mock_send(mock_email_send,
                                    receivers,
@@ -58,11 +53,8 @@ class TestAdminResendInvitation:
                                    bccs=[invitations[0].email])
 
     def test_should_return_a_404_when_organisation_is_not_found(
-            self, mock_email_send, app, init_db,
+            self, mock_email_send, mock_send_html_delay, app, init_db,
             saved_organisation_invitations, client):
-        from api.utils.emails import EmailUtil
-        EmailUtil.send_mail_as_html.delay = Mock(
-            side_effect=EmailUtil.send_mail_as_html)
         user_objs, org, user_ids, invitations, regular_user_id = \
             saved_organisation_invitations(1)
 
@@ -86,15 +78,12 @@ class TestAdminResendInvitation:
             'not_found'].format('Organisation id')
 
         # Check the the email calls were handled properly
-        assert not EmailUtil.send_mail_as_html.delay.called
+        assert not mock_send_html_delay.called
         assert not mock_email_send.called
 
     def test_should_return_a_404_when_invitation_id_is_not_found(
-            self, mock_email_send, app, init_db,
+            self, mock_email_send, app, init_db, mock_send_html_delay,
             saved_organisation_invitations, client):
-        from api.utils.emails import EmailUtil
-        EmailUtil.send_mail_as_html.delay = Mock(
-            side_effect=EmailUtil.send_mail_as_html)
         user_objs, org, user_ids, invitations, regular_user_id = \
             saved_organisation_invitations(1)
 
@@ -118,5 +107,5 @@ class TestAdminResendInvitation:
             'not_found'].format('Invitation')
 
         # Check the the email calls were handled properly
-        assert not EmailUtil.send_mail_as_html.delay.called
+        assert not mock_send_html_delay.called
         assert not mock_email_send.called

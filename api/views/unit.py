@@ -1,4 +1,4 @@
-from .base import BaseView, FilterByQueryMixin
+from .base import BaseView, BasePaginatedView
 from settings import endpoint
 from flask import request
 from api.models import Unit, Membership
@@ -11,8 +11,10 @@ from api.utils.error_messages import serialization_error
 
 # /org/<string:org_id>/parameters
 @endpoint('/org/<string:org_id>/units')
-class UnitView(BaseView, FilterByQueryMixin):
+class UnitView(BaseView, BasePaginatedView):
     __model__ = Unit
+    __SCHEMA__ = UnitSchema
+    RETRIEVE_SUCCESS_MSG = RETRIEVED.format('Unit')
 
     SEARCH_FILTER_ARGS = {
         'name': {
@@ -32,14 +34,10 @@ class UnitView(BaseView, FilterByQueryMixin):
     }
     protected_methods = ['GET', 'POST']
 
-    def get(self, org_id, user_data):
-        query_params = request.args
-        query = self.search_model(query_params, org_id=org_id)
-        page_query, meta = self.paginate_query(query, query_params)
-        data = UnitSchema(many=True).dump_success_data(
-            page_query, message=RETRIEVED.format('Unit'))
-        data['meta'] = meta
-        return data, 200
+    def filter_get_method_query(self, query, **kwargs):
+        org_id = kwargs['org_id']
+        return query.filter((self.__model__.organisation_id == org_id)
+                            | (self.__model__.organisation_id.is_(None)))
 
     def post(self, org_id, user_data):
         input_data = request.get_json()

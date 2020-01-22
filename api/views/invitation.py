@@ -1,4 +1,4 @@
-from .base import BaseView, FilterByQueryMixin
+from .base import BaseView, BasePaginatedView
 from settings import endpoint
 from flask import request
 from api.schemas import (InvitationRequestSchema, InvitationSchema,
@@ -13,7 +13,7 @@ from sqlalchemy import exc, orm
 
 
 @endpoint('/org/<string:org_id>/invitations')
-class OrgInvitations(BaseView, FilterByQueryMixin):
+class OrgInvitations(BaseView, BasePaginatedView):
     __model__ = Invitation
     protected_methods = ['POST', 'GET']
     SEARCH_FILTER_ARGS = {
@@ -221,32 +221,26 @@ class ResendInvitation(BaseView):
 
 
 @endpoint('/user/invitations')
-class UserInvitationsView(BaseView, FilterByQueryMixin):
+class UserInvitationsView(BaseView, BasePaginatedView):
     __model__ = Invitation
     protected_methods = ['GET']
     SEARCH_FILTER_ARGS = {
         'role_id': {
+            'filter_type': 'eq'
+        },
+        'role.name': {
             'filter_type': 'ilike'
         },
     }
-
+    __SCHEMA__ = InvitationSchema
+    EAGER_LOADING_FIELDS = ['organisation', 'role']
     SORT_KWARGS = {'defaults': 'created_at', 'sort_fields': {'created_at'}}
+    RETRIEVE_SUCCESS_MSG = RETRIEVED.format('Invitations')
+    SCHEMA_EXCLUDE = ['role_id', 'user_dashboard_url', 'signup_url']
 
-    def get(self, user_data):
-        query_params = request.args
-        query = self.search_model(query_params)
-        query = query.options(
-            orm.joinedload('organisation'),
-            orm.joinedload('role'),
-        ).filter_by(email=user_data['email'], )
-        page_query, meta = self.paginate_query(query, query_params)
-        fields_to_exclude = ['role_id', 'user_dashboard_url', 'signup_url']
-        data = InvitationSchema(many=True,
-                                exclude=fields_to_exclude).dump_success_data(
-                                    page_query,
-                                    message=RETRIEVED.format('Invitations'))
-        data['meta'] = meta
-        return data, 200
+    def filter_get_method_query(self, query, **kwargs):
+        user_data = kwargs.get('user_data')
+        return query.filter(Invitation.email == user_data['email'])
 
 
 @endpoint('/user/invitations/<string:invitation_id>/accept')

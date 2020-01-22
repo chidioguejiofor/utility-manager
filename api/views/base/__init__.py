@@ -1,1 +1,1 @@
-from .base_view import BaseView, CookieGeneratorMixin, FilterByQueryMixin
+from .base_view import BaseView, CookieGeneratorMixin, BasePaginatedView

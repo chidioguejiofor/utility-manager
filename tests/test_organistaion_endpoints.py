@@ -1,10 +1,10 @@
 from unittest.mock import Mock, patch
-from api.models import Membership, Organisation, Role
+from api.models import Membership, Organisation, Role, db
 from api.utils.error_messages import serialization_error, authentication_errors
 from .mocks.user import UserGenerator
 from .mocks.organisation import OrganisationGenerator
 from .mocks.redis import RedisMock
-from .assertions import assert_paginator_meta
+from .assertions import assert_unverified_user, assert_paginator_data_values
 import math
 import json
 from api.utils.success_messages import RETRIEVED
@@ -114,13 +114,11 @@ class TestCreateOrganisation:
         user = UserGenerator.generate_model_obj(save=True)
         token = UserGenerator.generate_token(user)
         client.set_cookie('/', 'token', token)
-        response = client.post(CREATE_ORG_URL,
-                               data=valid_data,
-                               content_type="multipart/form-data")
-        response_body = json.loads(response.data)
-        assert response.status_code == 403
-        assert authentication_errors['unverified_user'] == response_body[
-            'message']
+        assert_unverified_user(client,
+                               token,
+                               CREATE_ORG_URL,
+                               method='post',
+                               data=valid_data)
 
     def test_organisation_should_be_created_successfully_and_image_asynchronously_updated_when_input_data_is_valid(
             self, mock_destroy, mock_upload, app, init_db, client):
@@ -162,33 +160,33 @@ class TestCreateOrganisation:
 
 
 class TestRetrieveUserOrganisation:
+    def create_test_precondition(self, saved_org_and_user_generator,
+                                 num_of_orgs):
+        RedisMock.flush_all()
+        Membership.query.delete()
+        Organisation.query.delete()
+        db.session.commit()
+        creator, org = saved_org_and_user_generator
+        orgs_dict = []
+        for i in range(1, num_of_orgs + 1):
+            orgs_dict.append(
+                dict(creator_id=creator.id,
+                     display_name=f'Org{i}',
+                     name=f'Organisation {i}',
+                     website=f'some-url{i}.com',
+                     address=f'{i}, My Home '))
+        org_objs = Organisation.bulk_create(orgs_dict)
+        return org_objs, creator, org
+
     def test_should_retrieve_user_organisations(self, init_db, client,
                                                 saved_org_and_user_generator):
-        RedisMock.flush_all()
-        creator, org = saved_org_and_user_generator
-        orgs_dict = [
-            dict(creator_id=creator.id,
-                 display_name='Org1',
-                 name='Organisation Un',
-                 website='some-url.com',
-                 address='My Home'),
-            dict(creator_id=creator.id,
-                 display_name='Org2',
-                 name='Organisation Deux',
-                 website='some-url2.com',
-                 address='My Home'),
-            dict(creator_id=creator.id,
-                 display_name='Org3',
-                 name='Organisation Tres',
-                 website='some-url3.com',
-                 address='My Home'),
-        ]
-        Organisation.bulk_create(orgs_dict)
+        org_objs, creator, org = self.create_test_precondition(
+            saved_org_and_user_generator, 3)
+
         user = UserGenerator.generate_model_obj(save=True)
         memberships = []
-        display_names = Organisation.display_name.in_(['Org1', 'Org2', 'Org3'])
         role_id = Role.query.filter_by(name='REGULAR USERS').one().id
-        for org in Organisation.query.filter(display_names).all():
+        for org in org_objs:
             memberships.append(
                 Membership(
                     organisation_id=org.id,
@@ -198,58 +196,32 @@ class TestRetrieveUserOrganisation:
         Membership.bulk_create(memberships)
 
         token = UserGenerator.generate_token(user)
-
-        client.set_cookie('/', 'token', token)
-        response = client.get(RETRIEVE_USER_ORGANISATIONS,
-                              content_type="application/json")
-        response_body = json.loads(response.data)
-        assert response.status_code == 200
-        assert response_body['message'] == RETRIEVED.format('organisations')
-        assert response_body['status'] == 'success'
-        assert_paginator_meta(
-            response_body,
+        assert_paginator_data_values(
+            created_objs=org_objs,
+            client=client,
+            token=token,
+            url=RETRIEVE_USER_ORGANISATIONS,
+            success_msg=RETRIEVED.format('organisations'),
             current_page=1,
-            total_objects=len(orgs_dict),
+            total_objects=len(org_objs),
             max_objects_per_page=10,
-            total_pages=math.ceil(len(orgs_dict) / 10),
+            total_pages=math.ceil(len(org_objs) / 10),
             next_page=None,
             prev_page=None,
         )
 
     def test_should_return_empty_array_when_no_membership_is_found(
             self, init_db, client, saved_org_and_user_generator):
-        creator, org = saved_org_and_user_generator
-        RedisMock.flush_all()
-        orgs_dict = [
-            dict(creator_id=creator.id,
-                 display_name='Org5',
-                 name='Organisation Un',
-                 website='some-url5.com',
-                 address='My Home'),
-            dict(creator_id=creator.id,
-                 display_name='Org6',
-                 name='Organisation Deux',
-                 website='some-url6.com',
-                 address='My Home'),
-            dict(creator_id=creator.id,
-                 display_name='Org7',
-                 name='Organisation Tres',
-                 website='some-url7.com',
-                 address='My Home'),
-        ]
-        Organisation.bulk_create(orgs_dict)
+        self.create_test_precondition(saved_org_and_user_generator, 5)
         user = UserGenerator.generate_model_obj(save=True)
         token = UserGenerator.generate_token(user)
 
-        client.set_cookie('/', 'token', token)
-        response = client.get(RETRIEVE_USER_ORGANISATIONS,
-                              content_type="application/json")
-        response_body = json.loads(response.data)
-        assert response.status_code == 200
-        assert response_body['message'] == RETRIEVED.format('organisations')
-        assert response_body['status'] == 'success'
-        assert_paginator_meta(
-            response_body,
+        assert_paginator_data_values(
+            created_objs=[],
+            client=client,
+            token=token,
+            url=RETRIEVE_USER_ORGANISATIONS,
+            success_msg=RETRIEVED.format('organisations'),
             current_page=1,
             total_objects=0,
             max_objects_per_page=10,

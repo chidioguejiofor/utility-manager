@@ -15,34 +15,34 @@ INVITE_KEY = 'invites'
 
 @patch('api.utils.emails.EmailUtil.SEND_CLIENT.send', autospec=True)
 class TestInviteUserToOrganisation:
-    def test_all_invitations_should_be_created_when_there_have_not_been_sent_previously(
-            self, mock_email_send, app, init_db, client):
-        from api.utils.emails import EmailUtil
-        EmailUtil.send_mail_as_html.delay = Mock(
-            side_effect=EmailUtil.send_mail_as_html)
+    def create_test_precondition(self, role_list, num_of_emails=3):
+        Invitation.query.delete()
         org = OrganisationGenerator.generate_model_obj(save=True,
                                                        verify_user=True)
-        regular_user_role_id = Role.query.filter_by(
-            name='REGULAR USERS').first().id
-        manager_role_id = Role.query.filter_by(name='MANAGER').first().id
-        Invitation.query.delete()
-        db.session.commit()
-        emails = ['email1@email.com', 'email2@email.com', 'email3@email.com']
-        invitation_request = [{
-            'email': emails[0],
-            'roleId': regular_user_role_id
-        }, {
-            'email': emails[1],
-            'roleId': manager_role_id
-        }, {
-            'email': emails[2],
-            'roleId': regular_user_role_id
-        }]
+        emails = []
+        invitation_request = []
+        for i in range(0, num_of_emails):
+            email = f'email{i+1}@email.com'
+            emails.append(email)
+            invitation_request.append({
+                'email': email,
+                'roleId': role_list[i % len(role_list)]
+            })
+
         request_data = {
             "userDashboardURL": "http://localhost:8080/dashboard",
             "signupURL": "http://localhost:8080",
             INVITE_KEY: invitation_request,
         }
+        return org, emails, invitation_request, request_data
+
+    def test_all_invitations_should_be_created_when_there_have_not_been_sent_previously(
+            self, mock_email_send, mock_send_html_delay, app, init_db, client):
+        regular_user_role_id = Role.query.filter_by(
+            name='REGULAR USERS').first().id
+        manager_role_id = Role.query.filter_by(name='MANAGER').first().id
+        org, emails, invitation_request, request_data = self.create_test_precondition(
+            [regular_user_role_id, manager_role_id], 3)
         emails = set(emails)
 
         token = UserGenerator.generate_token(org.creator)
@@ -64,12 +64,10 @@ class TestInviteUserToOrganisation:
             assert res['signupURL'] == request_data['signupURL']
 
         # Check the the email calls were sent properly
-        assert EmailUtil.send_mail_as_html.delay.called
+        assert mock_send_html_delay.called
 
-        subject, receivers, html = EmailUtil.send_mail_as_html.delay.call_args[
-            0]
-        blind_copies = EmailUtil.send_mail_as_html.delay.call_args[1][
-            'blind_copies']
+        subject, receivers, html = mock_send_html_delay.call_args[0]
+        blind_copies = mock_send_html_delay.call_args[1]['blind_copies']
         assert mock_email_send.called
         assert_send_grid_mock_send(mock_email_send,
                                    receivers,
@@ -80,36 +78,12 @@ class TestInviteUserToOrganisation:
                                    bccs=emails)
 
     def test_redis_roles_should_be_properly_cached_the_role_of_the_user_making_the_request(
-            self, mock_email_send, app, init_db, client):
-        from api.utils.emails import EmailUtil
-        EmailUtil.send_mail_as_html.delay = Mock(
-            side_effect=EmailUtil.send_mail_as_html)
-        org = OrganisationGenerator.generate_model_obj(save=True,
-                                                       verify_user=True)
+            self, mock_email_send, mock_send_html_delay, app, init_db, client):
         regular_user_role_id = Role.query.filter_by(
             name='REGULAR USERS').first().id
         manager_role_id = Role.query.filter_by(name='MANAGER').first().id
-
-        Invitation.query.delete()
-        db.session.commit()
-        RedisMock.flush_all()  # removing all the data in redis mock
-        emails = ['email1@email.com', 'email2@email.com', 'email3@email.com']
-        invitation_request = [{
-            'email': emails[0],
-            'roleId': regular_user_role_id
-        }, {
-            'email': emails[1],
-            'roleId': manager_role_id
-        }, {
-            'email': emails[2],
-            'roleId': regular_user_role_id
-        }]
-        request_data = {
-            "userDashboardURL": "http://localhost:8080/dashboard",
-            "signupURL": "http://localhost:8080",
-            INVITE_KEY: invitation_request,
-        }
-        emails = set(emails)
+        org, emails, invitation_request, request_data = self.create_test_precondition(
+            [regular_user_role_id, manager_role_id], 3)
 
         token = UserGenerator.generate_token(
             org.creator)  # By default the creator becomes the owner
@@ -123,37 +97,16 @@ class TestInviteUserToOrganisation:
         assert RedisMock.get('ROLE_OWNER') == owner_role_id
 
     def test_should_fail_when_an_admin_tries_to_add_an_owner_role(
-            self, mock_email_send, app, init_db, client):
-        from api.utils.emails import EmailUtil
-        EmailUtil.send_mail_as_html.delay = Mock(
-            side_effect=EmailUtil.send_mail_as_html)
-        org = OrganisationGenerator.generate_model_obj(save=True,
-                                                       verify_user=True)
-        user = UserGenerator.generate_model_obj(save=True, verified=True)
+            self, mock_email_send, mock_send_html_delay, app, init_db, client):
         owner_role_id = Role.query.filter_by(name='OWNER').first().id
         admin_role_id = Role.query.filter_by(name='ADMIN').first().id
         manager_role_id = Role.query.filter_by(name='MANAGER').first().id
+        org, emails, invitation_request, request_data = self.create_test_precondition(
+            [owner_role_id, manager_role_id], 3)
+        user = UserGenerator.generate_model_obj(save=True, verified=True)
         Membership(organisation_id=org.id,
                    user_id=user.id,
                    role_id=admin_role_id).save()
-        Invitation.query.delete()
-        db.session.commit()
-        emails = ['email1@email.com', 'email2@email.com', 'email3@email.com']
-        invitation_request = [{
-            'email': emails[0],
-            'roleId': owner_role_id
-        }, {
-            'email': emails[1],
-            'roleId': manager_role_id
-        }, {
-            'email': emails[2],
-            'roleId': owner_role_id
-        }]
-        request_data = {
-            "userDashboardURL": "http://localhost:8080/dashboard",
-            "signupURL": "http://localhost:8080",
-            INVITE_KEY: invitation_request,
-        }
 
         token = UserGenerator.generate_token(user)
         client.set_cookie('/', 'token', token)
@@ -172,40 +125,20 @@ class TestInviteUserToOrganisation:
             'invalid_field_data']
 
         # Check the the email calls were handled properly
-        assert not EmailUtil.send_mail_as_html.delay.called
+        assert not mock_send_html_delay.called
         assert not mock_email_send.called
 
     def test_should_fail_when_the_user_is_not_an_admin_or_owner(
-            self, mock_email_send, app, init_db, client):
-        from api.utils.emails import EmailUtil
-        EmailUtil.send_mail_as_html.delay = Mock(
-            side_effect=EmailUtil.send_mail_as_html)
-        org = OrganisationGenerator.generate_model_obj(save=True,
-                                                       verify_user=True)
-        user = UserGenerator.generate_model_obj(save=True, verified=True)
+            self, mock_email_send, mock_send_html_delay, app, init_db, client):
+        regular_user_role_id = Role.query.filter_by(
+            name='REGULAR USERS').first().id
         manager_role_id = Role.query.filter_by(name='MANAGER').first().id
-        regular_user = Role.query.filter_by(name='REGULAR USERS').first().id
+        org, emails, invitation_request, request_data = self.create_test_precondition(
+            [regular_user_role_id, manager_role_id], 3)
+        user = UserGenerator.generate_model_obj(save=True, verified=True)
         Membership(organisation_id=org.id,
                    user_id=user.id,
-                   role_id=regular_user).save()
-        Invitation.query.delete()
-        db.session.commit()
-        emails = ['email1@email.com', 'email2@email.com', 'email3@email.com']
-        invitation_request = [{
-            'email': emails[0],
-            'roleId': manager_role_id
-        }, {
-            'email': emails[1],
-            'roleId': manager_role_id
-        }, {
-            'email': emails[2],
-            'roleId': regular_user
-        }]
-        request_data = {
-            "userDashboardURL": "http://localhost:8080/dashboard",
-            "signupURL": "http://localhost:8080",
-            INVITE_KEY: invitation_request,
-        }
+                   role_id=regular_user_role_id).save()
 
         token = UserGenerator.generate_token(user)
         client.set_cookie('/', 'token', token)
@@ -220,40 +153,21 @@ class TestInviteUserToOrganisation:
             'forbidden'].format('add roles')
 
         # Check the the email calls were handled properly
-        assert not EmailUtil.send_mail_as_html.delay.called
+        assert not mock_send_html_delay.called
         assert not mock_email_send.called
 
     def test_should_return_a_404_when_organisation_is_not_found(
-            self, mock_email_send, app, init_db, client):
-        from api.utils.emails import EmailUtil
-        EmailUtil.send_mail_as_html.delay = Mock(
-            side_effect=EmailUtil.send_mail_as_html)
-        org = OrganisationGenerator.generate_model_obj(save=True,
-                                                       verify_user=True)
-        user = UserGenerator.generate_model_obj(save=True, verified=True)
+            self, mock_email_send, mock_send_html_delay, app, init_db, client):
+        regular_user_role_id = Role.query.filter_by(
+            name='REGULAR USERS').first().id
+        admin_role_id = Role.query.filter_by(name='ADMIN').first().id
         manager_role_id = Role.query.filter_by(name='MANAGER').first().id
-        regular_user = Role.query.filter_by(name='REGULAR USERS').first().id
+        org, emails, invitation_request, request_data = self.create_test_precondition(
+            [regular_user_role_id, manager_role_id], 3)
+        user = UserGenerator.generate_model_obj(save=True, verified=True)
         Membership(organisation_id=org.id,
                    user_id=user.id,
-                   role_id=regular_user).save()
-        Invitation.query.delete()
-        db.session.commit()
-        emails = ['email1@email.com', 'email2@email.com', 'email3@email.com']
-        invitation_request = [{
-            'email': emails[0],
-            'roleId': manager_role_id
-        }, {
-            'email': emails[1],
-            'roleId': manager_role_id
-        }, {
-            'email': emails[2],
-            'roleId': regular_user
-        }]
-        request_data = {
-            "userDashboardURL": "http://localhost:8080/dashboard",
-            "signupURL": "http://localhost:8080",
-            INVITE_KEY: invitation_request,
-        }
+                   role_id=admin_role_id).save()
 
         token = UserGenerator.generate_token(user)
         client.set_cookie('/', 'token', token)
@@ -270,36 +184,15 @@ class TestInviteUserToOrganisation:
             'not_found'].format('Organisation id')
 
         # Check the the email calls were handled properly
-        assert not EmailUtil.send_mail_as_html.delay.called
+        assert not mock_send_html_delay.called
         assert not mock_email_send.called
 
     def test_should_fail_when_the_owner_tries_to_add_an_owner_role(  # You can't have 2 owners
-            self, mock_email_send, app, init_db, client):
-        from api.utils.emails import EmailUtil
-        EmailUtil.send_mail_as_html.delay = Mock(
-            side_effect=EmailUtil.send_mail_as_html)
-        org = OrganisationGenerator.generate_model_obj(save=True,
-                                                       verify_user=True)
+            self, mock_email_send, mock_send_html_delay, app, init_db, client):
         owner_role_id = Role.query.filter_by(name='OWNER').first().id
         manager_role_id = Role.query.filter_by(name='MANAGER').first().id
-        Invitation.query.delete()
-        db.session.commit()
-        emails = ['email1@email.com', 'email2@email.com', 'email3@email.com']
-        invitation_request = [{
-            'email': emails[0],
-            'roleId': owner_role_id
-        }, {
-            'email': emails[1],
-            'roleId': manager_role_id
-        }, {
-            'email': emails[2],
-            'roleId': owner_role_id
-        }]
-        request_data = {
-            "userDashboardURL": "http://localhost:8080/dashboard",
-            "signupURL": "http://localhost:8080",
-            INVITE_KEY: invitation_request,
-        }
+        org, emails, invitation_request, request_data = self.create_test_precondition(
+            [owner_role_id, manager_role_id], 3)
 
         token = UserGenerator.generate_token(org.creator)
         client.set_cookie('/', 'token', token)
@@ -318,41 +211,21 @@ class TestInviteUserToOrganisation:
             'invalid_field_data']
 
         # Check the the email calls were handled properly
-        assert not EmailUtil.send_mail_as_html.delay.called
+        assert not mock_send_html_delay.called
         assert not mock_email_send.called
 
     def test_should_fail_when_an_admin_tries_to_add_an_admin(
-            self, mock_email_send, app, init_db, client):
-        from api.utils.emails import EmailUtil
-        EmailUtil.send_mail_as_html.delay = Mock(
-            side_effect=EmailUtil.send_mail_as_html)
-        org = OrganisationGenerator.generate_model_obj(save=True,
-                                                       verify_user=True)
-        user = UserGenerator.generate_model_obj(save=True, verified=True)
+            self, mock_email_send, mock_send_html_delay, app, init_db, client):
         admin_role_id = Role.query.filter_by(name='ADMIN').first().id
         manager_role_id = Role.query.filter_by(name='MANAGER').first().id
-        Membership(organisation_id=org.id,
-                   user_id=user.id,
-                   role_id=admin_role_id).save()
-        Invitation.query.delete()
-        db.session.commit()
-        emails = ['email1@email.com', 'email2@email.com', 'email3@email.com']
-        invitation_request = [{
-            'email': emails[0],
-            'roleId': admin_role_id
-        }, {
-            'email': emails[1],
-            'roleId': manager_role_id
-        }, {
-            'email': emails[2],
-            'roleId': admin_role_id
-        }]
-        request_data = {
-            "userDashboardURL": "http://localhost:8080/dashboard",
-            "signupURL": "http://localhost:8080",
-            INVITE_KEY: invitation_request,
-        }
-
+        org, emails, invitation_request, request_data = self.create_test_precondition(
+            [admin_role_id, manager_role_id], 3)
+        user = UserGenerator.generate_model_obj(save=True, verified=True)
+        Membership(
+            user_id=user.id,
+            organisation_id=org.id,
+            role_id=admin_role_id,
+        ).save()
         token = UserGenerator.generate_token(user)
         client.set_cookie('/', 'token', token)
         response = client.post(INVITATION_URL.format(org.id),
@@ -370,38 +243,17 @@ class TestInviteUserToOrganisation:
             'invalid_field_data']
 
         # Check the the email calls were handled properly
-        assert not EmailUtil.send_mail_as_html.delay.called
+        assert not mock_send_html_delay.called
         assert not mock_email_send.called
 
     def test_when_all_the_invites_already_exists_they_should_all_fail(
-            self, mock_email_send, app, init_db, client):
-        from api.utils.emails import EmailUtil
-        EmailUtil.send_mail_as_html.delay = Mock(
-            side_effect=EmailUtil.send_mail_as_html)
-        org = OrganisationGenerator.generate_model_obj(save=True,
-                                                       verify_user=True)
+            self, mock_email_send, mock_send_html_delay, app, init_db, client):
+
         regular_user_role_id = Role.query.filter_by(
             name='REGULAR USERS').first().id
         manager_role_id = Role.query.filter_by(name='MANAGER').first().id
-        emails = ['email1@email.com', 'email2@email.com', 'email3@email.com']
-        Invitation.query.delete()
-        db.session.commit()
-        invitation_request = [{
-            'email': emails[0],
-            'roleId': regular_user_role_id
-        }, {
-            'email': emails[1],
-            'roleId': manager_role_id
-        }, {
-            'email': emails[2],
-            'roleId': regular_user_role_id
-        }]
-
-        request_data = {
-            "userDashboardURL": "http://localhost:8080/dashboard",
-            "signupURL": "http://localhost:8080",
-            INVITE_KEY: invitation_request,
-        }
+        org, emails, invitation_request, request_data = self.create_test_precondition(
+            [regular_user_role_id, manager_role_id], 3)
         invitation_models = [
             Invitation(organisation_id=org.id,
                        email=inv['email'],
@@ -432,38 +284,17 @@ class TestInviteUserToOrganisation:
                 'invites_already_sent_to_email']
 
         # Check the the email calls were handled properly
-        assert not EmailUtil.send_mail_as_html.delay.called
+        assert not mock_send_html_delay.called
         assert not mock_email_send.called
 
     def test_all_invitations_should_fail_when_at_least_one_invite_is_contains_an_invalid_role_id(
-            self, mock_email_send, app, init_db, client):
-        from api.utils.emails import EmailUtil
-        EmailUtil.send_mail_as_html.delay = Mock(
-            side_effect=EmailUtil.send_mail_as_html)
-        org = OrganisationGenerator.generate_model_obj(save=True,
-                                                       verify_user=True)
+            self, mock_email_send, mock_send_html_delay, app, init_db, client):
+
         regular_user_role_id = Role.query.filter_by(
             name='REGULAR USERS').first().id
         manager_role_id = Role.query.filter_by(name='MANAGER').first().id
-        Invitation.query.delete()
-        db.session.commit()
-        emails = ['email1@email.com', 'email2@email.com', 'email3@email.com']
-        invitation_request = [{
-            'email': emails[0],
-            'roleId': 'some-invalid_id'
-        }, {
-            'email': emails[1],
-            'roleId': manager_role_id
-        }, {
-            'email': emails[2],
-            'roleId': regular_user_role_id
-        }]
-        request_data = {
-            "userDashboardURL": "http://localhost:8080/dashboard",
-            "signupURL": "http://localhost:8080",
-            INVITE_KEY: invitation_request,
-        }
-
+        org, emails, invitation_request, request_data = self.create_test_precondition(
+            ['some-invalid_id', manager_role_id, regular_user_role_id], 3)
         token = UserGenerator.generate_token(org.creator)
         client.set_cookie('/', 'token', token)
         response = client.post(INVITATION_URL.format(org.id),
@@ -478,38 +309,17 @@ class TestInviteUserToOrganisation:
             'missing_role_ids']
 
         # Check the the email calls were handled properly
-        assert not EmailUtil.send_mail_as_html.delay.called
+        assert not mock_send_html_delay.called
         assert not mock_email_send.called
 
     def test_should_have_a_partial_success_when_some_emails_exists_and_some_dont(
-            self, mock_email_send, app, init_db, client):
-        from api.utils.emails import EmailUtil
-        EmailUtil.send_mail_as_html.delay = Mock(
-            side_effect=EmailUtil.send_mail_as_html)
-        org = OrganisationGenerator.generate_model_obj(save=True,
-                                                       verify_user=True)
+            self, mock_email_send, mock_send_html_delay, app, init_db, client):
         regular_user_role_id = Role.query.filter_by(
             name='REGULAR USERS').first().id
         manager_role_id = Role.query.filter_by(name='MANAGER').first().id
-        emails = ['email1@email.com', 'email2@email.com', 'email3@email.com']
-        Invitation.query.delete()
-        db.session.commit()
-        invitation_request = [{
-            'email': emails[0],
-            'roleId': regular_user_role_id
-        }, {
-            'email': emails[1],
-            'roleId': manager_role_id
-        }, {
-            'email': emails[2],
-            'roleId': regular_user_role_id
-        }]
-
-        request_data = {
-            "userDashboardURL": "http://localhost:8080/dashboard",
-            "signupURL": "http://localhost:8080",
-            INVITE_KEY: invitation_request,
-        }
+        org, emails, invitation_request, request_data = self.create_test_precondition(
+            [regular_user_role_id, manager_role_id], 3)
+        token = UserGenerator.generate_token(org.creator)
         invitation_models = [
             Invitation(organisation_id=org.id,
                        email=inv['email'],
@@ -521,7 +331,6 @@ class TestInviteUserToOrganisation:
         success_email = {*emails[0:]}
         failure_emails = {*emails[1:]}
         Invitation.bulk_create(invitation_models)
-        token = UserGenerator.generate_token(org.creator)
 
         client.set_cookie('/', 'token', token)
         response = client.post(INVITATION_URL.format(org.id),
@@ -546,12 +355,10 @@ class TestInviteUserToOrganisation:
             assert res['signupURL'] == request_data['signupURL']
 
         # Check the the email calls were sent properly
-        assert EmailUtil.send_mail_as_html.delay.called
+        assert mock_send_html_delay.called
 
-        subject, receivers, html = EmailUtil.send_mail_as_html.delay.call_args[
-            0]
-        blind_copies = EmailUtil.send_mail_as_html.delay.call_args[1][
-            'blind_copies']
+        subject, receivers, html = mock_send_html_delay.call_args[0]
+        blind_copies = mock_send_html_delay.call_args[1]['blind_copies']
         assert mock_email_send.called
         assert_send_grid_mock_send(mock_email_send,
                                    receivers,
@@ -562,40 +369,16 @@ class TestInviteUserToOrganisation:
                                    bccs=success_email)
 
     def test_should_fail_when_duplicate_email_is_specified_in_request(
-            self, mock_email_send, app, init_db, client):
-        from api.utils.emails import EmailUtil
-        EmailUtil.send_mail_as_html.delay = Mock(
-            side_effect=EmailUtil.send_mail_as_html)
-        org = OrganisationGenerator.generate_model_obj(save=True,
-                                                       verify_user=True)
+            self, mock_email_send, mock_send_html_delay, app, init_db, client):
         regular_user_role_id = Role.query.filter_by(
             name='REGULAR USERS').first().id
         manager_role_id = Role.query.filter_by(name='MANAGER').first().id
-        emails = [
-            'email1@email.com', 'email1@email.com', 'email3@email.com',
-            'email3@email.com'
-        ]
-        Invitation.query.delete()
-        db.session.commit()
-        invitation_request = [{
-            'email': emails[0],
-            'roleId': regular_user_role_id
-        }, {
-            'email': emails[1],
-            'roleId': manager_role_id
-        }, {
-            'email': emails[2],
-            'roleId': regular_user_role_id
-        }, {
-            'email': emails[3],
-            'roleId': regular_user_role_id
-        }]
-
-        request_data = {
-            "userDashboardURL": "http://localhost:8080/dashboard",
-            "signupURL": "http://localhost:8080",
-            INVITE_KEY: invitation_request,
-        }
+        org, emails, invitation_request, request_data = self.create_test_precondition(
+            [regular_user_role_id, manager_role_id], 4)
+        request_data[INVITE_KEY][1]['email'] = request_data[INVITE_KEY][0][
+            'email']
+        request_data[INVITE_KEY][3]['email'] = request_data[INVITE_KEY][2][
+            'email']
 
         token = UserGenerator.generate_token(org.creator)
 
@@ -615,41 +398,24 @@ class TestInviteUserToOrganisation:
             'invalid_field_data']
 
         # Check the the email calls were handled properly
-        assert not EmailUtil.send_mail_as_html.delay.called
+        assert not mock_send_html_delay.called
         assert not mock_email_send.called
 
     #
     def test_should_fail_when_the_email_or_role_id_key_is_missing_in_any_item_on_the_list(
-            self, mock_email_send, app, init_db, client):
-        from api.utils.emails import EmailUtil
-        EmailUtil.send_mail_as_html.delay = Mock(
-            side_effect=EmailUtil.send_mail_as_html)
-        org = OrganisationGenerator.generate_model_obj(save=True,
-                                                       verify_user=True)
+            self, mock_email_send, mock_send_html_delay, app, init_db, client):
         regular_user_role_id = Role.query.filter_by(
             name='REGULAR USERS').first().id
         manager_role_id = Role.query.filter_by(name='MANAGER').first().id
-        emails = [
-            'email1@email.com', 'email1@email.com', 'email3@email.com',
-            'email3@email.com'
-        ]
-        Invitation.query.delete()
-        db.session.commit()
-        invitation_request = [{
-            'email': emails[0],
-            'roleId': regular_user_role_id
-        }, {
-            'roleId': manager_role_id
-        }, {
-            'email': emails[2],
-        }, {}]
-
-        request_data = {
-            "userDashboardURL": "http://localhost:8080/dashboard",
-            "signupURL": "http://localhost:8080",
-            INVITE_KEY: invitation_request,
+        org, emails, invitation_request, request_data = self.create_test_precondition(
+            [regular_user_role_id, manager_role_id], 4)
+        request_data[INVITE_KEY][1] = {
+            'roleId': request_data[INVITE_KEY][1]['roleId']
         }
-
+        request_data[INVITE_KEY][2] = {
+            'email': request_data[INVITE_KEY][2]['email']
+        }
+        request_data[INVITE_KEY][3] = {}
         token = UserGenerator.generate_token(org.creator)
 
         client.set_cookie('/', 'token', token)
@@ -673,14 +439,11 @@ class TestInviteUserToOrganisation:
             'invalid_field_data']
 
         # Check the the email calls were handled properly
-        assert not EmailUtil.send_mail_as_html.delay.called
+        assert not mock_send_html_delay.called
         assert not mock_email_send.called
 
     def test_should_fail_when_the_required_keys_are_missing(
-            self, mock_email_send, app, init_db, client):
-        from api.utils.emails import EmailUtil
-        EmailUtil.send_mail_as_html.delay = Mock(
-            side_effect=EmailUtil.send_mail_as_html)
+            self, mock_email_send, mock_send_html_delay, app, init_db, client):
         org = OrganisationGenerator.generate_model_obj(save=True,
                                                        verify_user=True)
         request_data = {}
@@ -705,5 +468,5 @@ class TestInviteUserToOrganisation:
             'invalid_field_data']
 
         # Check the the email calls were handled properly
-        assert not EmailUtil.send_mail_as_html.delay.called
+        assert not mock_send_html_delay.called
         assert not mock_email_send.called

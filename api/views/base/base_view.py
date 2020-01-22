@@ -1,4 +1,5 @@
 from sqlalchemy.sql import expression
+from sqlalchemy.orm import joinedload
 import os
 import numpy as np
 from flask_restplus import Resource
@@ -117,12 +118,27 @@ class CookieGeneratorMixin:
         return resp
 
 
-class SearchFilter:
+class QueryOperationMixin:
+    def extract_rel_model_and_col(self, model_column):
+        if '.' in model_column:
+            rel, rel_name = model_column.split('.')
+            model_class_col = getattr(self.__model__, rel)
+            rel_class = model_class_col.property.mapper.class_
+            return rel, rel_name, model_class_col, rel_class
+
+
+class SearchFilter(QueryOperationMixin):
     __model__ = None
+    EAGER_LOADING_FIELDS = []
 
     def search_model(self, query_params, org_id=None):
         filter_condition = []
-        model_query = self.__model__.query
+        eager_loading = [
+            joinedload(relationship)
+            for relationship in self.EAGER_LOADING_FIELDS
+        ]
+
+        model_query = self.__model__.query.options(*eager_loading)
         if org_id:
             model_query = self.__model__.query.filter(
                 (self.__model__.organisation_id == org_id)
@@ -134,6 +150,10 @@ class SearchFilter:
             if search_value is not None and len(search_value) > 0:
                 col_filter = self._retrieve_filter_binary_expression(
                     model_column, search_value)
+                rel_args = self.extract_rel_model_and_col(model_column)
+                if rel_args:
+                    rel_class = rel_args[3]
+                    model_query = model_query.join(rel_class)
             if col_filter is not None:
                 filter_condition.append(col_filter)
 
@@ -144,14 +164,21 @@ class SearchFilter:
 
     def _retrieve_filter_binary_expression(self, model_col, search_value):
         filter_type = self.SEARCH_FILTER_ARGS[model_col]['filter_type']
-        model_class_col = getattr(self.__model__, model_col)
+        rel_args = self.extract_rel_model_and_col(model_col)
+        if rel_args:
+            rel, rel_name, model_class_col, rel_class = rel_args
+            model_class_col = getattr(rel_class, rel_name)
+        else:
+            model_class_col = getattr(self.__model__, model_col)
 
         if filter_type == 'ilike':
             return model_class_col.ilike(f'%{search_value}%')
+        elif filter_type == 'eq':
+            return model_class_col == search_value
         raise Exception('Invalid search args in model')
 
 
-class Paginator:
+class Paginator(QueryOperationMixin):
     """
     Contains methods for paginating an output query.
     """
@@ -196,7 +223,12 @@ class Paginator:
                 field_name = order_by_str[1:]
                 asc_or_desc = order_by_str[0]
             if len(field_name) > 0 and field_name in sort_fields:
-                filter_field = getattr(self.__model__, field_name)
+                rel_args = self.extract_rel_model_and_col(field_name)
+                if rel_args:
+                    rel, rel_name, model_class_col, rel_class = rel_args
+                    filter_field = getattr(rel_class, rel_name)
+                else:
+                    filter_field = getattr(self.__model__, field_name)
                 filter_field = filter_field.desc(
                 ) if asc_or_desc == '-' else filter_field
                 order_by_list.append(expression.nullslast(filter_field))
@@ -240,5 +272,22 @@ class Paginator:
         return paginated_query.items, meta
 
 
-class FilterByQueryMixin(SearchFilter, Paginator):
-    pass
+class BasePaginatedView(SearchFilter, Paginator):
+    __SCHEMA__ = None
+    RETRIEVE_SUCCESS_MSG = None
+    SCHEMA_EXCLUDE = []
+
+    def get(self, *args, **kwargs):
+        query_params = request.args
+        query = self.search_model(query_params)
+        query = self.filter_get_method_query(query, *args, **kwargs)
+        page_query, meta = self.paginate_query(query, query_params)
+        data = self.__SCHEMA__(exclude=self.SCHEMA_EXCLUDE,
+                               many=True).dump_success_data(
+                                   page_query,
+                                   message=self.RETRIEVE_SUCCESS_MSG)
+        data['meta'] = meta
+        return data, 200
+
+    def filter_get_method_query(self, query):
+        return query

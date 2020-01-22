@@ -1,5 +1,5 @@
 import json
-import re
+import math
 from api.utils.token_validator import TokenValidator
 from api.utils.error_messages import authentication_errors
 from api.utils.constants import CONFIRM_TOKEN
@@ -79,3 +79,35 @@ def assert_paginator_meta(response_body, **kwargs):
             (kwargs['total_pages'] - 1) * kwargs['max_objects_per_page'])
     else:
         assert len(response_body['data']) == kwargs['max_objects_per_page']
+
+
+def assert_paginator_data_values(*, client, token, url, created_objs,
+                                 success_msg, **kwargs):
+    client.set_cookie('/', 'token', token)
+    response = client.get(url, content_type="application/json")
+    response_body = json.loads(response.data)
+    assert response.status_code == 200
+    assert response_body['message'] == success_msg
+    assert response_body['status'] == 'success'
+    assert_paginator_meta(
+        response_body,
+        current_page=kwargs.get('current_page', 1),
+        total_objects=kwargs.get('total_objects', len(created_objs)),
+        max_objects_per_page=kwargs.get('max_objects_per_page', 10),
+        total_pages=kwargs.get('total_pages',
+                               math.ceil(len(created_objs) / 10)),
+        next_page=kwargs.get('next_page', 2),
+        prev_page=kwargs.get('prev_page'),
+    )
+    return response_body
+
+
+def assert_unverified_user(client, token, url, method='get', data={}):
+    client.set_cookie('/', 'token', token)
+    response = getattr(client,
+                       method.lower())(url,
+                                       data=data,
+                                       content_type="multipart/form-data")
+    response_body = json.loads(response.data)
+    assert response.status_code == 403
+    assert authentication_errors['unverified_user'] == response_body['message']

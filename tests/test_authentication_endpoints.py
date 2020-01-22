@@ -191,11 +191,8 @@ class TestLinkClickedFromUserEmail:
 @patch('api.utils.emails.EmailUtil.SEND_CLIENT.send', autospec=True)
 class TestResendEmail:
     def test_user_should_be_able_to_resend_email_when_he_has_not_verified_account(
-            self, mock_send, init_db, client):
-        from api.utils.emails import EmailUtil
+            self, mock_send, init_db, mock_send_html_delay, client):
         RedisMock.flush_all()
-        EmailUtil.send_mail_as_html.delay = Mock(
-            side_effect=EmailUtil.send_mail_as_html)
         redirect_url = UserGenerator.generate_api_input_data()['redirectURL']
         valid_data = json.dumps({'redirectURL': redirect_url})
         user = UserGenerator.generate_model_obj(save=True)
@@ -373,10 +370,7 @@ class TestConfirmResetPassword:
 @patch('api.utils.emails.EmailUtil.SEND_CLIENT.send', autospec=True)
 class TestResetPassword:
     def test_user_should_be_able_to_make_reset_request_when_account_exists(
-            self, mock_send, init_db, client):
-        from api.utils.emails import EmailUtil
-        EmailUtil.send_mail_as_html.delay = Mock(
-            side_effect=EmailUtil.send_mail_as_html)
+            self, mock_send, init_db, mock_send_html_delay, client):
         user = UserGenerator.generate_model_obj(save=True)
         redirect_url = fake.url()
         valid_data = json.dumps({
@@ -388,7 +382,7 @@ class TestResetPassword:
                                 data=valid_data,
                                 content_type="application/json")
 
-        assert EmailUtil.send_mail_as_html.delay.called
+        assert mock_send_html_delay.called
         assert len(RedisMock.expired_cache) == len(
             RedisMock.cache) == 1  # expired and set were called once
         html_to_check_for = '<h1>Reset Account</h1>'
@@ -459,11 +453,9 @@ class TestResetPassword:
 @patch('api.utils.emails.EmailUtil.SEND_CLIENT.send', autospec=True)
 class TestRegisterEndpoint:
     def test_new_user_should_register_successfully_when_valid_data_is_provided_and_should_be_added_to_the_db(
-            self, mock_send, init_db, client):
-        from api.utils.emails import EmailUtil
+            self, mock_send, init_db, mock_send_html_delay, client):
         RedisMock.flush_all()
-        EmailUtil.send_mail_as_html.delay = Mock(
-            side_effect=EmailUtil.send_mail_as_html)
+
         valid_user_dict = UserGenerator.generate_api_input_data()
         response = client.post(REGISTER_URL,
                                data=json.dumps(valid_user_dict),

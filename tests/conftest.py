@@ -1,4 +1,5 @@
 import pytest
+from unittest.mock import Mock
 from settings import create_app
 from api.models import Unit
 from .mocks.organisation import OrganisationGenerator
@@ -89,6 +90,14 @@ def saved_user_invitations(init_db):
         return org_objs, user, org_ids, invitations, regular_user_id
 
     return create_and_return_mock_data
+
+
+@pytest.fixture(scope='function')
+def mock_send_html_delay():
+    from api.utils.emails import EmailUtil
+    EmailUtil.send_mail_as_html.delay = Mock(
+        side_effect=EmailUtil.send_mail_as_html)
+    return EmailUtil.send_mail_as_html.delay
 
 
 @pytest.fixture(scope='function')

@@ -1,4 +1,4 @@
-from .base import BaseView, FilterByQueryMixin
+from .base import BaseView, BasePaginatedView
 from settings import endpoint
 from flask import request
 from api.schemas import OrganisationSchema, OrgAndMembershipSchema
@@ -23,17 +23,27 @@ class CreateOrg(BaseView):
 
 
 @endpoint('/user/orgs')
-class RetrieveUserMemberships(BaseView, FilterByQueryMixin):
+class RetrieveUserMemberships(BaseView, BasePaginatedView):
     __model__ = Membership
-    SORT_KWARGS = {'defaults': 'role_id', 'sort_fields': {'role_id'}}
     protected_methods = ['GET']
     unverified_methods = ['GET']
 
-    def get(self, user_data):
-        memberships = Membership.query.filter_by(user_id=user_data['id'])
-        query_params = request.args
-        page_query, meta = self.paginate_query(memberships, query_params)
-        data = OrgAndMembershipSchema(many=True).dump_success_data(
-            page_query, message=RETRIEVED.format('organisations'))
-        data['meta'] = meta
-        return data, 200
+    SORT_KWARGS = {
+        'defaults': 'role_id',
+        'sort_fields': {'role_id', 'role.name'}
+    }
+    SEARCH_FILTER_ARGS = {
+        'role_id': {
+            'filter_type': 'eq'
+        },
+        'role.name': {
+            'filter_type': 'ilike'
+        },
+    }
+    __SCHEMA__ = OrgAndMembershipSchema
+    EAGER_LOADING_FIELDS = ['organisation', 'role']
+    RETRIEVE_SUCCESS_MSG = RETRIEVED.format('organisations')
+
+    def filter_get_method_query(self, query, **kwargs):
+        user_data = kwargs.get('user_data')
+        return query.filter(Membership.user_id == user_data['id'])

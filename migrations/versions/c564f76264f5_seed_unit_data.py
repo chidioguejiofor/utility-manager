@@ -17,8 +17,7 @@ depends_on = None
 
 
 def upgrade():
-    SeederManager.seed_database('unit')
-
+    pass
 
 def downgrade():
     pass

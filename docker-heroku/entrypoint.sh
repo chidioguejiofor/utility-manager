@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 echo "<<< API is now trying to connect to the database >>> "
+mkdir -p dumped_files
 echo "<<< Upgrade Database >>> "
 flask db upgrade # upgrade db
-
+flask seed
 sleep 2
 echo "<<< Starting celery_config worker >>> "
 exec celery -A  celery_config.celery_app worker --loglevel=info  & # runs celery_config worker

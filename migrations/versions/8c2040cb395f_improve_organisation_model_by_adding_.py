@@ -36,7 +36,7 @@ def downgrade():
     op.add_column('Organisation', sa.Column('logo_url', sa.VARCHAR(), autoincrement=False, nullable=True))
     op.add_column('Organisation', sa.Column('password_hash', sa.TEXT(), autoincrement=False, nullable=True))
     op.add_column('Organisation', sa.Column('email', sa.VARCHAR(), autoincrement=False, nullable=True))
-    op.drop_constraint(None, 'Organisation', type_='foreignkey')
+    # op.drop_constraint(None, 'Organisation', type_='foreignkey')
     op.create_unique_constraint('org_unique_name_constraint', 'Organisation', ['name'])
     op.create_unique_constraint('org_email_unique_constraint', 'Organisation', ['email'])
     op.drop_constraint('org_unique_website_constraint', 'Organisation', type_='unique')

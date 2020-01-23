@@ -5,8 +5,14 @@ from api.models import Unit
 from api.utils.exceptions import UniqueConstraintException, ModelOperationException
 
 
+def create_test_precondition(init_db):
+    Unit.query.delete()
+    init_db.session.commit()
+
+
 class TestUnitSerializer:
     def test_convert_unit_model_to_json(self, init_db):
+        create_test_precondition(init_db)
         unit = Unit(name='Ampere', letter_symbol='A')
         unit.save()
         json_data = UnitSchema().dump_success_data(unit)
@@ -18,6 +24,7 @@ class TestUnitSerializer:
 
     def test_loading_json_to_model_when_data_is_valid_should_succeed(
             self, init_db):
+        create_test_precondition(init_db)
         unit_dict = {
             'name': 'Voltage',
             'letterSymbol': 'V',
@@ -32,6 +39,7 @@ class TestUnitSerializer:
 class TestUnitModel:
     def test_should_save_user_to_db_successfully_when_data_is_valid(
             self, init_db):
+        create_test_precondition(init_db)
         Unit(name='Meters', letter_symbol='m').save()
 
         unit = Unit.query.filter_by(name='Meters', letter_symbol='m').first()
@@ -39,6 +47,7 @@ class TestUnitModel:
         assert unit.letter_symbol == 'm'
 
     def test_should_not_save_unit_and_symbol_pair_twice(self, init_db):
+        create_test_precondition(init_db)
         Unit(name='Hertz', letter_symbol='Hz').save()
         with pytest.raises(UniqueConstraintException) as e:
             Unit(name='Hertz', letter_symbol='Hz').save()
@@ -47,6 +56,7 @@ class TestUnitModel:
 
     def test_should_not_save_model_with_greek_symbol_and_letter_symbol(
             self, init_db):
+        create_test_precondition(init_db)
         with pytest.raises(ModelOperationException) as e:
             Unit(name='Hertz', letter_symbol='Hz', greek_symbol_num=20).save()
 
@@ -57,6 +67,7 @@ class TestUnitModel:
 
     def test_should_not_save_model_when_both_greek_symbol_and_letter_symbol_are_null(
             self, init_db):
+        create_test_precondition(init_db)
         with pytest.raises(ModelOperationException) as e:
             Unit(name='Hertz', letter_symbol=None,
                  greek_symbol_num=None).save()

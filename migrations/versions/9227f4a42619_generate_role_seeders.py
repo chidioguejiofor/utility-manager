@@ -7,7 +7,6 @@ Create Date: 2020-01-15 22:48:40.563175
 """
 from alembic import op
 import sqlalchemy as sa
-from seeders.seeders_manager import SeederManager
 
 # revision identifiers, used by Alembic.
 revision = '9227f4a42619'
@@ -17,7 +16,7 @@ depends_on = None
 
 
 def upgrade():
-    SeederManager.seed_database('role')
+    pass
 
 
 def downgrade():

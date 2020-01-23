@@ -2,10 +2,11 @@
 
 echo "<<< API is sleeping for 30 seconds to allow Database to connect >>> "
 sleep 30 # waiting for the postgres db and redis to start up first
-
+mkdir -p dumped_files
 echo "<<< API is now trying to connect to the database >>> "
 echo "<<< Upgrade Database >>> "
 flask db upgrade # migrate db
+flask seed
 
 sleep 6
 echo "<<< Starting celery_config worker >>> "

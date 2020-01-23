@@ -45,7 +45,7 @@ def unit_objs(app):
 @pytest.yield_fixture(scope='module')
 def init_db(app):
     db.create_all()
-    SeederManager.seed_database('role')
+    SeederManager.run()
     RedisMock.flush_all()
     yield db
     db.session.close()

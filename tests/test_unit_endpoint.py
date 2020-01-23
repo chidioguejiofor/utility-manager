@@ -1,6 +1,6 @@
 import math
 import json
-from api.models import Unit, Membership, Role
+from api.models import Unit, Membership, Role, db
 from api.utils.error_messages import serialization_error
 from api.utils.success_messages import CREATED, RETRIEVED
 from .mocks.user import UserGenerator
@@ -14,6 +14,8 @@ class TestCreateUnitEndpoint:
     def test_should_create_unit_successfully_when_user_is_valid(
             self, app, init_db, client, saved_org_and_user_generator):
         user, org = saved_org_and_user_generator
+        Unit.query.delete()
+        db.session.commit()
         unit_json = {
             'name': 'Joules',
             'letterSymbol': 'J',
@@ -35,6 +37,8 @@ class TestCreateUnitEndpoint:
 
     def test_unit_should_not_be_created_when_you_it_has_already_been_seeded(
             self, app, init_db, client, saved_org_and_user_generator):
+        Unit.query.delete()
+        db.session.commit()
         user, org = saved_org_and_user_generator
         unit_json = {
             'name': 'Joules',
@@ -63,6 +67,8 @@ class TestCreateUnitEndpoint:
 
     def test_the_endpoint_when_user_is_not_a_member_of_current_organisation_returns_404(
             self, app, init_db, client, saved_org_and_user_generator):
+        Unit.query.delete()
+        db.session.commit()
         user, org = saved_org_and_user_generator
         user_two = UserGenerator.generate_model_obj(save=True, verified=True)
         unit_json = {

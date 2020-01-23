@@ -18,6 +18,7 @@ from jwt.exceptions import PyJWTError, ExpiredSignature
 import werkzeug.exceptions
 import cloudinary
 import inspect
+import click
 
 db = SQLAlchemy()
 dotenv.load_dotenv()
@@ -159,6 +160,14 @@ def make_celery(app):
     return celery
 
 
+def create_cli_commands(app):
+    @app.cli.command('seed')
+    @click.argument('key', required=False)
+    def seed(key=None):
+        from seeders.seeders_manager import SeederManager
+        SeederManager.run(key)
+
+
 def create_app(current_env=os.getenv('FLASK_ENV', 'production')):
     app = Flask(__name__)
     origins = ['*']
@@ -188,6 +197,7 @@ def create_app(current_env=os.getenv('FLASK_ENV', 'production')):
 
     create_error_handlers(app)
     # celery_scheduler.conf.update(app.config)
+    create_cli_commands(app)
 
     @app.shell_context_processor
     def make_shell_context():

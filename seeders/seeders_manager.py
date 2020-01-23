@@ -37,3 +37,11 @@ class SeederManager:
         ]
 
         cls.MAPPER[key].__model__.bulk_create(seed_data_not_in_db)
+
+    @classmethod
+    def run(cls, key=None):
+        if key:
+            cls.seed_database(key)
+        else:
+            for key in cls.MAPPER.keys():
+                cls.seed_database(key)

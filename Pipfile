@@ -27,6 +27,7 @@ faker = "*"
 pytest-env = "*"
 gunicorn = "*"
 pyyaml = "*"
+click = "*"
 
 [dev-packages]
 yapf = "*"

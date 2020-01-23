@@ -28,6 +28,7 @@ pytest-env = "*"
 gunicorn = "*"
 pyyaml = "*"
 click = "*"
+sentry-sdk = {version = "==0.14.1", extras = ["flask"]}
 
 [dev-packages]
 yapf = "*"

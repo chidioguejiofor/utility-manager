@@ -19,6 +19,8 @@ import werkzeug.exceptions
 import cloudinary
 import inspect
 import click
+import sentry_sdk
+from sentry_sdk.integrations.flask import FlaskIntegration
 
 db = SQLAlchemy()
 dotenv.load_dotenv()
@@ -26,6 +28,12 @@ api_blueprint = Blueprint('api_bp', __name__, url_prefix='/api')
 bp = Blueprint('errors', __name__)
 router = Api(api_blueprint)
 endpoint = router.route
+
+flask_env = os.getenv('FLASK_ENV')
+if flask_env in ['production', 'staging']:
+    sentry_sdk.init(dsn=os.getenv('SENTRY_IO_URL'),
+                    integrations=[FlaskIntegration()],
+                    environment=flask_env)
 
 cloudinary.config(cloud_name=os.getenv('CLOUDINARY_NAME'),
                   api_key=os.getenv('CLOUDINARY_API_KEY'),

@@ -4,7 +4,7 @@ from sqlalchemy import event
 from api.utils.time_util import TimeUtil
 from api.utils.error_messages import serialization_error, authentication_errors
 from api.utils.exceptions import UniqueConstraintException, ResponseException, ModelOperationException
-from api.utils.constants import CELERY_TASKS
+from api.utils.constants import CELERY_TASKS, SENTRY_IGNORE_ERRORS
 import os
 from flask import Blueprint
 from flask_sqlalchemy import SQLAlchemy
@@ -13,7 +13,7 @@ from marshmallow.exceptions import ValidationError
 from flask_cors import CORS
 import dotenv
 import logging
-from celery import Celery, Task
+from celery import Celery
 from jwt.exceptions import PyJWTError, ExpiredSignature
 import werkzeug.exceptions
 import cloudinary
@@ -33,6 +33,7 @@ flask_env = os.getenv('FLASK_ENV')
 if flask_env in ['production', 'staging']:
     sentry_sdk.init(dsn=os.getenv('SENTRY_IO_URL'),
                     integrations=[FlaskIntegration()],
+                    ignore_errors=SENTRY_IGNORE_ERRORS,
                     environment=flask_env)
 
 cloudinary.config(cloud_name=os.getenv('CLOUDINARY_NAME'),

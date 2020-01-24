@@ -181,7 +181,7 @@ class TestInviteUserToOrganisation:
         assert response_body['status'] == 'error'
 
         assert response_body['message'] == serialization_error[
-            'not_found'].format('Organisation id')
+            'not_found'].format('Organisation')
 
         # Check the the email calls were handled properly
         assert not mock_send_html_delay.called

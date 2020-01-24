@@ -1,4 +1,4 @@
-from .base import BaseView
+from .base import BaseView, BaseOrgView
 from settings import endpoint
 from flask import request
 from api.models import Membership
@@ -10,30 +10,13 @@ from api.utils.error_messages import serialization_error, authentication_errors
 
 
 @endpoint('/org/<string:org_id>/parameters')
-class CreateParameter(BaseView):
+class CreateParameter(BaseOrgView):
     protected_methods = ['POST']
 
-    def post(self, org_id, user_data):
+    ALLOWED_ROLES = {'POST': ['MANAGER', 'OWNER']}
+
+    def post(self, org_id, user_data, membership):
         json_data = request.get_json()
-        user_org_membership = Membership.query.filter(
-            (Membership.user_id == user_data['id'])
-            & (Membership.organisation_id == org_id)).first()
-        if not user_org_membership:
-            raise ResponseException(
-                message=serialization_error['not_found'].format(
-                    'Organisation'),
-                status_code=404,
-            )
-        allowed_roles = [
-            RedisUtil.get_role_id('MANAGER'),
-            RedisUtil.get_role_id('OWNER'),
-        ]
-        if user_org_membership.role.id not in allowed_roles:
-            raise ResponseException(
-                message=authentication_errors['forbidden'].format(
-                    'create a parameter'),
-                status_code=403,
-            )
         json_data['organisationId'] = org_id
         json_data['createdById'] = user_data['id']
         param_obj = ParameterSchema().load(json_data)

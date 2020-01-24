@@ -1,1 +1,1 @@
-from .base_view import BaseView, CookieGeneratorMixin, BasePaginatedView
+from .base_views import BaseView, CookieGeneratorMixin, BasePaginatedView, BaseOrgView

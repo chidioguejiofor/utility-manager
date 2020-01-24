@@ -29,8 +29,8 @@ class RetrieveUserMemberships(BaseView, BasePaginatedView):
     unverified_methods = ['GET']
 
     SORT_KWARGS = {
-        'defaults': 'role_id',
-        'sort_fields': {'role_id', 'role.name'}
+        'defaults': 'organisation.name',
+        'sort_fields': {'organisation.name', 'role_id', 'role.name'}
     }
     SEARCH_FILTER_ARGS = {
         'role_id': {

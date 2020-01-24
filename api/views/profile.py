@@ -9,7 +9,7 @@ from api.utils.exceptions import ResponseException
 
 
 @endpoint('/user/profile')
-class Profile(BaseView, CookieGeneratorMixin):
+class Profile(BaseView):
     protected_methods = ['GET', 'PATCH']
     unverified_methods = ['GET', 'PATCH']
 

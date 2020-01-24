@@ -1,4 +1,4 @@
-from .base import BaseView, BasePaginatedView
+from .base import BaseView, BasePaginatedView, BaseOrgView
 from settings import endpoint
 from flask import request
 from api.schemas import (InvitationRequestSchema, InvitationSchema,
@@ -13,9 +13,12 @@ from sqlalchemy import exc, orm
 
 
 @endpoint('/org/<string:org_id>/invitations')
-class OrgInvitations(BaseView, BasePaginatedView):
+class OrgInvitations(BaseOrgView, BasePaginatedView):
     __model__ = Invitation
+    # auth_settings
     protected_methods = ['POST', 'GET']
+
+    # query settings
     SEARCH_FILTER_ARGS = {
         'role_id': {
             'filter_type': 'ilike'
@@ -30,57 +33,20 @@ class OrgInvitations(BaseView, BasePaginatedView):
         'sort_fields': {'created_at', 'role_id'}
     }
 
-    def get(self, user_data, org_id):
-        membership = Membership.query.options(
-            orm.joinedload('role'), orm.joinedload('organisation'),
-            orm.joinedload('member')).filter_by(
-                organisation_id=org_id, user_id=user_data['id']).first()
+    __SCHEMA__ = InvitationSchema
+    RETRIEVE_SUCCESS_MSG = RETRIEVED.format('Invitations')
+    SCHEMA_EXCLUDE = [
+        'role_id', 'user_dashboard_url', 'signup_url', 'organisation'
+    ]
+    EAGER_LOADING_FIELDS = ['role']
 
-        if not membership:
-            raise ResponseException(
-                message=serialization_error['not_found'].format(
-                    'Organisation id'),
-                status_code=404,
-            )
+    # org view settings
+    ALLOWED_ROLES = {
+        'GET': ['OWNER', 'ADMIN'],
+        'POST': ['OWNER', 'ADMIN'],
+    }
 
-        if membership.role.name not in ['OWNER', 'ADMIN']:
-            raise ResponseException(
-                message=authentication_errors['forbidden'].format(
-                    'access this'),
-                status_code=403,
-            )
-        query_params = request.args
-        query = self.search_model(query_params)
-        query = query.options(
-            orm.joinedload('role'), ).filter_by(organisation_id=org_id)
-        page_query, meta = self.paginate_query(query, query_params)
-        fields_to_exclude = [
-            'role_id', 'user_dashboard_url', 'signup_url', 'organisation'
-        ]
-        data = InvitationSchema(many=True,
-                                exclude=fields_to_exclude).dump_success_data(
-                                    page_query,
-                                    message=RETRIEVED.format('Invitations'))
-        data['meta'] = meta
-        return data, 200
-
-    def post(self, user_data, org_id):
-        membership = Membership.query.options(
-            orm.joinedload('role'), orm.joinedload('organisation'),
-            orm.joinedload('member')).filter_by(
-                organisation_id=org_id, user_id=user_data['id']).first()
-
-        if not membership:
-            raise ResponseException(
-                message=serialization_error['not_found'].format(
-                    'Organisation id'),
-                status_code=404,
-            )
-        if membership.role.name not in ['OWNER', 'ADMIN']:
-            raise ResponseException(
-                message=authentication_errors['forbidden'].format('add roles'),
-                status_code=403,
-            )
+    def post(self, user_data, org_id, membership):
         request_data = request.get_json()
         roles_user_cannot_send_invites = self.roles_that_cannot_be_sent_invites_by_current_user(
             membership.role.name)
@@ -174,29 +140,14 @@ class OrgInvitations(BaseView, BasePaginatedView):
 
 
 @endpoint('/org/<string:org_id>/invitations/<string:invitation_id>/resend')
-class ResendInvitation(BaseView):
+class ResendInvitation(BaseOrgView):
     protected_methods = ['POST']
+    # org view settings
+    ALLOWED_ROLES = {
+        'POST': ['OWNER', 'ADMIN'],
+    }
 
-    def post(self, user_data, invitation_id, org_id):
-        membership = Membership.query.options(
-            orm.joinedload('role'), orm.joinedload('organisation'),
-            orm.joinedload('member')).filter_by(
-                organisation_id=org_id, user_id=user_data['id']).first()
-
-        if not membership:
-            raise ResponseException(
-                message=serialization_error['not_found'].format(
-                    'Organisation id'),
-                status_code=404,
-            )
-
-        if membership.role.name not in ['OWNER', 'ADMIN']:
-            raise ResponseException(
-                message=authentication_errors['forbidden'].format(
-                    'access this'),
-                status_code=403,
-            )
-
+    def post(self, user_data, invitation_id, org_id, membership):
         invitation = Invitation.query.filter_by(
             id=invitation_id,
             organisation_id=org_id,
@@ -234,7 +185,10 @@ class UserInvitationsView(BaseView, BasePaginatedView):
     }
     __SCHEMA__ = InvitationSchema
     EAGER_LOADING_FIELDS = ['organisation', 'role']
-    SORT_KWARGS = {'defaults': 'created_at', 'sort_fields': {'created_at'}}
+    SORT_KWARGS = {
+        'defaults': 'created_at',
+        'sort_fields': {'created_at', 'role.name'}
+    }
     RETRIEVE_SUCCESS_MSG = RETRIEVED.format('Invitations')
     SCHEMA_EXCLUDE = ['role_id', 'user_dashboard_url', 'signup_url']
 
@@ -249,11 +203,10 @@ class AcceptInvitation(BaseView):
 
     def post(self, user_data, invitation_id):
 
-        invitation = Invitation.query.options(
-            orm.joinedload('role'), orm.joinedload('organisation')).filter_by(
-                email=user_data['email'],
-                id=invitation_id,
-            ).first()
+        invitation = Invitation.eager('role', 'organisation').filter_by(
+            email=user_data['email'],
+            id=invitation_id,
+        ).first()
         if invitation is None:
             raise ResponseException(
                 message=serialization_error['not_found'].format('Invitation'),

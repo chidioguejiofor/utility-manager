@@ -1,11 +1,11 @@
 import math
 import json
 from api.models import Unit, Membership, Role, db
-from api.utils.error_messages import serialization_error
+from api.utils.error_messages import serialization_error, authentication_errors
 from api.utils.success_messages import CREATED, RETRIEVED
 from .mocks.user import UserGenerator
 from .mocks.organisation import OrganisationGenerator
-from .assertions import assert_paginator_data_values
+from .assertions import assert_paginator_data_values, assert_user_not_in_organisation
 
 UNITS_ENDPOINT = '/api/org/{}/units'
 
@@ -109,7 +109,7 @@ class TestCreateUnitEndpoint:
 
         response_body = json.loads(response.data)
         assert response.status_code == 403
-        assert response_body['message'] == serialization_error['not_an_admin']
+        assert response_body['message'] == authentication_errors['forbidden']
 
     def test_should_fail_when_data_is_missing(self, app, init_db, client,
                                               saved_org_and_user_generator):
@@ -156,11 +156,31 @@ class TestRetrieveUnit:
                                      url=UNITS_ENDPOINT.format(org.id),
                                      success_msg=RETRIEVED.format('Unit'))
 
+    def test_should_return_a_404_when_the_user_is_not_part_of_the_organisation(
+            self, init_db, client, unit_objs, saved_org_and_user_generator):
+        unit_json, token, user, org = self.create_test_precondition(
+            unit_objs, init_db, saved_org_and_user_generator)
+        org_two = OrganisationGenerator.generate_model_obj(save=True)
+
+        client.set_cookie('/', 'token', token)
+        response = client.get(
+            f'{UNITS_ENDPOINT.format(org_two.id)}?name_search=SomeOrg2Unit',
+            content_type="application/json")
+        assert_user_not_in_organisation(response)
+
     def test_should_not_retrieve_unit_where_that_are_not_in_specified_organisation(
             self, init_db, client, unit_objs, saved_org_and_user_generator):
         unit_json, token, user, org = self.create_test_precondition(
             unit_objs, init_db, saved_org_and_user_generator)
         org_two = OrganisationGenerator.generate_model_obj(save=True)
+        regular_user_role = Role.query.filter_by(
+            name='REGULAR USERS').first().id
+        Membership(
+            user_id=user.id,
+            organisation_id=org_two.id,
+            role_id=regular_user_role,
+        ).save()
+
         Unit(
             name='SomeOrg2Unit',
             organisation_id=org_two.id,

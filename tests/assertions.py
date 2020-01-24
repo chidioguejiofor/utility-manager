@@ -1,7 +1,7 @@
 import json
 import math
 from api.utils.token_validator import TokenValidator
-from api.utils.error_messages import authentication_errors
+from api.utils.error_messages import authentication_errors, serialization_error
 from api.utils.constants import CONFIRM_TOKEN
 
 
@@ -85,6 +85,7 @@ def assert_paginator_data_values(*, client, token, url, created_objs,
                                  success_msg, **kwargs):
     client.set_cookie('/', 'token', token)
     response = client.get(url, content_type="application/json")
+
     response_body = json.loads(response.data)
     assert response.status_code == 200
     assert response_body['message'] == success_msg
@@ -111,3 +112,13 @@ def assert_unverified_user(client, token, url, method='get', data={}):
     response_body = json.loads(response.data)
     assert response.status_code == 403
     assert authentication_errors['unverified_user'] == response_body['message']
+
+
+def assert_user_not_in_organisation(response):
+    response_body = json.loads(response.data)
+
+    assert response.status_code == 404
+    assert response_body['status'] == 'error'
+    assert response_body['message'] == serialization_error['not_found'].format(
+        'Organisation')
+    assert 'data' not in response_body

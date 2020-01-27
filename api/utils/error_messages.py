@@ -75,5 +75,7 @@ invitation_errors = {
     'duplicate_email_in_request':
     'This email was specified more that once in this request',
     'missing_role_ids': 'Some role IDs you specified do not exist',
-    'cannot_add_role': "You don't have permission to invite a {}."
+    'cannot_add_role': "You don't have permission to invite a {}.",
+    'email_already_in_org':
+    "This user is already a member of your organisation"
 }

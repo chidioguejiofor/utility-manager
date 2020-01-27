@@ -7,13 +7,13 @@ from .user import User
 from .role import Role
 
 
-class _OrgMembershipSchema(BaseSchema):
+class OrgMembershipSchema(BaseSchema):
     member = fields.Nested(User)
     role = fields.Nested(Role)
 
 
 class OrganisationMembership(Organisation):
-    memberships = fields.Nested(_OrgMembershipSchema, many=True)
+    memberships = fields.Nested(OrgMembershipSchema, many=True)
 
 
 class MembershipIDOnlySchema(BaseSchema):

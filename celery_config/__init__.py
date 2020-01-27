@@ -1,4 +1,5 @@
-from settings import make_celery, create_app
+from settings.service_config import make_celery
+from settings import create_app
 
 app = create_app()
 

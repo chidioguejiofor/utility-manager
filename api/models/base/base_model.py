@@ -3,7 +3,7 @@ from api.utils.time_util import TimeUtil
 from api.utils.error_messages import serialization_error
 from api.utils.exceptions import UniqueConstraintException
 from sqlalchemy.ext.declarative import declared_attr, AbstractConcreteBase
-from sqlalchemy import exc
+from sqlalchemy import exc, orm
 import numpy as np
 from .id_generator import IDGenerator
 
@@ -113,6 +113,11 @@ class BaseModel(db.Model):
         self.before_update(*args, **kwargs)
         db.session.commit()
         self.after_update(*args, **kwargs)
+
+    @classmethod
+    def eager(cls, *args):
+        cols = [orm.joinedload(arg) for arg in args]
+        return cls.query.options(*cols)
 
     @classmethod
     def update_query(cls, query, **kwargs):

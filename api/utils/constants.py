@@ -10,4 +10,6 @@ SENTRY_IGNORE_ERRORS = [
     'api.utils.exceptions.UniqueConstraintException',
     'api.utils.exceptions.ResponseException',
     'api.utils.exceptions.ModelOperationException',
+    'marshmallow.exceptions.ValidationError',
+    'jwt.exceptions.InvalidTokenError',
 ]

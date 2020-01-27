@@ -9,33 +9,78 @@ place of work. Some of the main  EPICs are:
 Run the following commands:
 
 - Ensure you have `Python 3.7.2`  installed from [here](https://www.python.org/downloads/release/python-372/)
-- Install `pipenv` via `pip install pipenv`
-- Clone repo via  `git clone https://github.com/chidioguejiofor/utility-manager.git`
-- Start virtual environment via `pipenv shell`
-- Install dependencies via `pipenv install`
-- Make bash scripts executable via: ` chmod +x hooks/install_hooks.sh hooks/pre_commit.sh scripts/install_commit_template.sh`
-- Install hooks by running: `hooks/install_hooks.sh`
-- Install Git commit template by running: `scripts/install_commit_template.sh`
+- Install `pipenv` via: 
+```bash
+pip install pipenv
+```
+- Clone repo via:  
+```bash
+git clone https://github.com/chidioguejiofor/utility-manager.git
+```
+- Start virtual environment via:
+```bash
+pipenv shell
+```
+- Install dependencies via:
+```bash
+pipenv install
+```
+- Make bash scripts executable via:
+```bash
+chmod +x hooks/install_hooks.sh hooks/pre_commit.sh scripts/install_commit_template.sh
+```
+- Install hooks by running:
+```bash
+hooks/install_hooks.sh
+```
+- Install Git commit template by running:
+```bash
+scripts/install_commit_template.sh
+```
 - Use the `.env-sample` file to create a `.env` file with required environmental variables
 
 ## Linting Automation
 The app is configured to automatically lint your files once you do a `git commit`. However you can decide to lint all 
-python files by running `yapf -ir $(find . -name '*.py')`. 
+python files by running 
+```bash
+yapf -ir $(find . -name '*.py')
+``` 
+
 Linting follows the [PE8 Style Guide](https://www.python.org/dev/peps/pep-0008/)
 
 ## Database and Migrations 
 To setup the database simply follow these steps:
 - Using your preferred tool, create the database and put the URL in the `DATABASE_URL` env variable
-- Generate migrations from model by running `flask db migrate`
-- Upgrade your database by running: `flask db upgrade`
+- Generate migrations from model by running
+
+```bash
+flask db migrate
+```
+- Upgrade your database by running:
+
+```bash
+flask db upgrade
+```
 - You should have your db setup properly.
 
 Subsequently, if a new model is created or while rebasing data run the following to update your db:
-- Generate migrations for new changes via: `flask db migrate`
-- Update your database via `flask db upgrade`
+- Generate migrations for new changes via:
+
+```bash
+flask db migrate
+```
+- Update your database via
+
+```bash
+flask db upgrade
+```
 
 ## Starting the app
-In order to start the app locally, run `flask run`. 
+In order to start the app locally, run
+
+```bash
+flask run
+``` 
 
 ## Documentation
 You can all the endpoints in the postman documentation  here [![Open Docs](https://run.pstmn.io/button.svg)](https://documenter.getpostman.com/view/4208573/SVtVTT71)
@@ -45,15 +90,28 @@ Celery is used as the message broker for the API. We use it to run heavy task(vi
 
 #### Starting Redis
 In order to run celery, you would need to ensure that a `redis` is running. 
-Using docker, you can achieve this by running `docker run -p 6379:6379 redis`. This would spin up a redis server in  port `6379` in your machine.
+Using docker, you can achieve this by running 
+
+```bash
+docker run -p 6379:6379 redis
+``` 
+This would spin up a redis server in  port `6379` in your machine.
 
 If your `redis server` is running on a different port/host, you must specify the URL in the `.env` file via key `REDIS_SERVER_URL`
 
 #### Starting Celery
 Once Redis is up and running, you can now spin up celery in these steps:
 
-- Start celery worker by executing  `celery -A  celery_config.celery_app worker --loglevel=info`
-- In a separate terminal, spin up the celery beat via `celery -A  celery_config.celery_scheduler beat --loglevel=info`
+- Start celery worker by executing 
+
+```bash
+celery -A  celery_config.celery_app worker --loglevel=info
+```
+- In a separate terminal, spin up the celery beat via
+
+```bash
+celery -A  celery_config.celery_scheduler beat --loglevel=info
+```
 
 ## Docker Setup
 You could also easily start the API, Celery and Redis by using docker in the following steps:
@@ -68,12 +126,20 @@ You could also easily start the API, Celery and Redis by using docker in the fol
 When you are done running your app with docker, it is best to free up resources that is used. To do this follow these steps:
 
 1. Make the *free_up_memory.sh* bash script executable by running `chmod +x scripts/free_up_memory.sh`
-2. Execute the script via: `scripts/free_up_memory.sh`
+2. Execute the script via:
+
+```bash
+scripts/free_up_memory.sh
+```
 
 The above would free up memory that is used in your docker instance
 
 ## Running Tests
-You can run tests for the app via: `pytest --cov=api --cov-report=html`
+You can run tests for the app via: 
+
+```bash
+pytest --cov=api --cov-report=html
+```
 
 ## Test Conventions
 All features added to the app must fully tested with the aim being 95% coverage. 
@@ -97,12 +163,16 @@ This infrastructure ensures that:
 
 The steps to generating seed data to the db are as follows:
 
-- Open the shell via `flask shell`
+- Open the shell via
+
+```bash
+flask shell
+```
 - Create a list of dictionary or get a query object from the sqlachemy and store that in a variable
 - Import seeders manager and call the `write_seed_data` function passing the required arguments
 
 For example,
-```
+```python
 from seeders.seeders_manager import SeederManager
 roles = [
 
@@ -134,45 +204,13 @@ to recognise the 'key' (which is 'role' in this case)  and the steps for that is
 
 Once you have generated the data to be seeded open the shell and run: 
 
-```
-SeederManager.seed_database('role') 
-```
-
-This would update the db with new data for the specified 'key'. 
-
-In order to ensure that this data appears everywhere, you should add a sqlachemy migration that seeds the new data to the
-database. You can add a revision by running `flask db revision`. Then make the call to seed the database in the generated
- file eg:
-
-```
-"""generate role seeders
-
-Revision ID: 9227f4a42619
-Revises: 7e11e7009b8f
-Create Date: 2020-01-15 22:48:40.563175
-
-"""
-from alembic import op
-import sqlalchemy as sa
-from seeders.seeders_manager import SeederManager
-
-# revision identifiers, used by Alembic.
-revision = '9227f4a42619'
-down_revision = '7e11e7009b8f'
-branch_labels = None
-depends_on = None
-
-
-def upgrade():
-    SeederManager.seed_database('role')
-
-
-def downgrade():
-    pass
-
+```bash
+flask seed [key]
 ```
 
-The above is once again from the roles model.
+The command takes an optional `key` argument that specifies the exact table to seed. If the key
+is not provided then all the seeders that have been configured are run
+
 
 ### Adding new Seeders to the app
 When a model requires a seeder, it should be created
@@ -186,7 +224,10 @@ would be compared with the model to ensure that it has not already been created.
 
 For example, assuming we have seeders for users( we don't!). It would look something like this
 
-```
+```python
+
+from seeders.model_seeders.base import BaseSeeder
+from api.models import User as UserModel
 
 class UserSeed(BaseSeeder):
     __model__ = UserModel

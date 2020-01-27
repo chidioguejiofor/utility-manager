@@ -1,14 +1,12 @@
-from .base import BaseView, BasePaginatedView
+from .base import BaseOrgView, BasePaginatedView
 from settings import endpoint
 from api.schemas import RoleSchema
-from api.models import Membership, Role
-from api.utils.exceptions import ResponseException
+from api.models import Role
 from api.utils.success_messages import RETRIEVED
-from api.utils.error_messages import serialization_error
 
 
 @endpoint('/org/<string:org_id>/roles')
-class OrgRoleView(BaseView, BasePaginatedView):
+class OrgRoleView(BaseOrgView, BasePaginatedView):
     __model__ = Role
     protected_methods = ['GET']
     SEARCH_FILTER_ARGS = {
@@ -21,15 +19,4 @@ class OrgRoleView(BaseView, BasePaginatedView):
     SORT_KWARGS = {'defaults': 'name', 'sort_fields': {'name'}}
 
     def filter_get_method_query(self, query, **kwargs):
-        user_data = kwargs.get('user_data')
-        org_id = kwargs.get('org_id')
-        membership = Membership.query.options().filter_by(
-            organisation_id=org_id, user_id=user_data['id']).first()
-
-        if not membership:
-            raise ResponseException(
-                message=serialization_error['not_found'].format(
-                    'Organisation id'),
-                status_code=404,
-            )
-        return super().filter_get_method_query(query)
+        return query

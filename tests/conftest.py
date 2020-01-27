@@ -6,7 +6,7 @@ from .mocks.organisation import OrganisationGenerator
 from .mocks.user import UserGenerator
 from seeders.seeders_manager import SeederManager
 from .mocks.redis import RedisMock
-from api.models import Role, Invitation, db
+from api.models import Role, Invitation, db, Organisation, Membership
 
 
 @pytest.yield_fixture(scope='session')
@@ -66,14 +66,17 @@ def saved_org_and_user_generator(unit_objs):
 
 @pytest.fixture(scope='function')
 def saved_user_invitations(init_db):
-    def create_and_return_mock_data(num_of_org=3):
+    def create_and_return_mock_data(num_of_org=3,
+                                    role_name='REGULAR USERS',
+                                    user=None):
         org_objs = []
         for _ in range(0, num_of_org):
             org_objs.append(
                 OrganisationGenerator.generate_model_obj(save=True))
 
-        user = UserGenerator.generate_model_obj(save=True, verified=True)
-        regular_user_id = Role.query.filter_by(name='REGULAR USERS').first().id
+        if not user:
+            user = UserGenerator.generate_model_obj(save=True, verified=True)
+        regular_user_id = Role.query.filter_by(name=role_name).first().id
         invitations = []
         org_ids = set(org.id for org in org_objs)
         for org in org_objs:

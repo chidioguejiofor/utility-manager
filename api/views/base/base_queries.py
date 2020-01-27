@@ -1,125 +1,11 @@
-from sqlalchemy.sql import expression
+from sqlalchemy.sql import expression, desc
 from sqlalchemy.orm import joinedload
-import os
 import numpy as np
-from flask_restplus import Resource
-from flask import request
-from api.utils.exceptions import ResponseException
-from api.utils.token_validator import TokenValidator
-from api.utils.error_messages import authentication_errors
-from api.utils.constants import LOGIN_TOKEN
-from datetime import timedelta, datetime
-from functools import wraps
 
 
-class Authentication:
-    def __init__(self, view):
-        self.view = view
-
-    def _decode_token(self, check_user_is_verified=False):
-        """Decoded a token and returns the decoded data
-
-        Args:
-            token_type (int, optional): The type of token being decoded
-                Defaults to `1`(LOGIN_TOKEN)
-            check_user_is_verified (bool): When this is true, this ensures that
-                the user is also verified
-
-        Returns:
-            dict, str: The decoded token data
-        """
-        token = request.cookies.get('token')
-        if not token:
-            raise ResponseException(
-                authentication_errors['missing_token'],
-                401,
-            )
-        decoded_data = TokenValidator.decode_token_data(token,
-                                                        token_type=LOGIN_TOKEN)
-        if check_user_is_verified and not decoded_data['verified']:
-            raise ResponseException(
-                authentication_errors['unverified_user'],
-                403,
-            )
-        return decoded_data
-
-    def _authenticate_user(self):
-        view = self.view
-        method = request.method.upper()
-
-        if method in view.protected_methods:
-            verified_user_only = not (method in view.unverified_methods)
-            return self._decode_token(
-                check_user_is_verified=verified_user_only)
-        return None
-
-    def __call__(self, func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            user_data = self._authenticate_user()
-
-            if user_data:
-                return func(*args, **kwargs, user_data=user_data)
-            return func(*args, **kwargs)
-
-        return wrapper
-
-
-class classproperty(object):
-    def __init__(self, f):
-        self.f = f
-
-    def __get__(self, obj, owner):
-        return self.f(owner)
-
-
-class BaseView(Resource):
-    protected_methods = []
-    unverified_methods = []
-
-    @classproperty
-    def method_decorators(self):
-        return [Authentication(self)]
-
-
-class CookieGeneratorMixin:
-    def generate_cookie(self, resp, user):
-        """Adds cookie to the response
-
-           When user is None, it invalidates the previously sent token
-           Args:
-               resp flask.Response: response object from
-               user models.User: User model object that would be used to generate token
-               expired bool: when True, token would be expired
-
-           Returns:
-               flask.Response: final response object would have the required cookie
-
-       """
-        secure_flag = os.getenv('FLASK_ENV') == 'production'
-        token = 'deleted'
-        expires = datetime.now() - timedelta(days=100)
-        if user:
-            payload = {
-                'type': LOGIN_TOKEN,
-                'email': user.email,
-                'id': user.id,
-                'username': user.username,
-                "verified": user.verified,
-            }
-            token = TokenValidator.create_token(payload)
-            expires = datetime.now() + timedelta(days=100)
-        resp.set_cookie('token',
-                        token,
-                        path='/',
-                        httponly=True,
-                        secure=secure_flag,
-                        expires=expires)
-        return resp
-
-
-class QueryOperationMixin:
+class BaseFilterMixin:
     def extract_rel_model_and_col(self, model_column):
+
         if '.' in model_column:
             rel, rel_name = model_column.split('.')
             model_class_col = getattr(self.__model__, rel)
@@ -127,22 +13,12 @@ class QueryOperationMixin:
             return rel, rel_name, model_class_col, rel_class
 
 
-class SearchFilter(QueryOperationMixin):
+class SearchFilterMixin(BaseFilterMixin):
     __model__ = None
-    EAGER_LOADING_FIELDS = []
 
-    def search_model(self, query_params, org_id=None):
+    def search_model(self, query_params):
         filter_condition = []
-        eager_loading = [
-            joinedload(relationship)
-            for relationship in self.EAGER_LOADING_FIELDS
-        ]
-
-        model_query = self.__model__.query.options(*eager_loading)
-        if org_id:
-            model_query = self.__model__.query.filter(
-                (self.__model__.organisation_id == org_id)
-                | (self.__model__.organisation_id.is_(None)))
+        model_query = self.__model__.eager(*self.EAGER_LOADING_FIELDS)
         for model_column in self.SEARCH_FILTER_ARGS:
             col_search_str = f'{str(model_column)}_search'
             search_value = query_params.get(col_search_str)
@@ -151,6 +27,7 @@ class SearchFilter(QueryOperationMixin):
                 col_filter = self._retrieve_filter_binary_expression(
                     model_column, search_value)
                 rel_args = self.extract_rel_model_and_col(model_column)
+
                 if rel_args:
                     rel_class = rel_args[3]
                     model_query = model_query.join(rel_class)
@@ -178,7 +55,7 @@ class SearchFilter(QueryOperationMixin):
         raise Exception('Invalid search args in model')
 
 
-class Paginator(QueryOperationMixin):
+class PaginatorMixin(BaseFilterMixin):
     """
     Contains methods for paginating an output query.
     """
@@ -227,10 +104,10 @@ class Paginator(QueryOperationMixin):
                 if rel_args:
                     rel, rel_name, model_class_col, rel_class = rel_args
                     filter_field = getattr(rel_class, rel_name)
+                    query = query.join(rel_class)
                 else:
                     filter_field = getattr(self.__model__, field_name)
-                filter_field = filter_field.desc(
-                ) if asc_or_desc == '-' else filter_field
+                filter_field = desc(filter_field) if asc_or_desc == '-' else filter_field
                 order_by_list.append(expression.nullslast(filter_field))
 
         return query.order_by(*order_by_list)
@@ -272,22 +149,3 @@ class Paginator(QueryOperationMixin):
         return paginated_query.items, meta
 
 
-class BasePaginatedView(SearchFilter, Paginator):
-    __SCHEMA__ = None
-    RETRIEVE_SUCCESS_MSG = None
-    SCHEMA_EXCLUDE = []
-
-    def get(self, *args, **kwargs):
-        query_params = request.args
-        query = self.search_model(query_params)
-        query = self.filter_get_method_query(query, *args, **kwargs)
-        page_query, meta = self.paginate_query(query, query_params)
-        data = self.__SCHEMA__(exclude=self.SCHEMA_EXCLUDE,
-                               many=True).dump_success_data(
-                                   page_query,
-                                   message=self.RETRIEVE_SUCCESS_MSG)
-        data['meta'] = meta
-        return data, 200
-
-    def filter_get_method_query(self, query):
-        return query

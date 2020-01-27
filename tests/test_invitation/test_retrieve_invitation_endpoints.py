@@ -1,9 +1,8 @@
 from api.utils.success_messages import RETRIEVED
 from api.utils.error_messages import authentication_errors
-from api.models import Membership
+from api.models import Membership, Organisation, db
 from tests.mocks.user import UserGenerator
 from tests.assertions import assert_paginator_data_values
-from tests.assertions import assert_paginator_meta
 
 import json
 import math
@@ -13,9 +12,16 @@ USER_INVITATION_URL = '/api/user/invitations'
 INVITE_KEY = 'invites'
 
 
+def run_test_precondition():
+    Membership.query.delete()
+    Organisation.query.delete()
+    db.session.commit()
+
+
 class TestRetrieveUserInvitations:
     def test_should_retrieve_user_invitations_when_user_is_verified(
             self, init_db, client, saved_user_invitations):
+        run_test_precondition()
         org_objs, user, org_ids, invitations, regular_user_id = saved_user_invitations(
             5)
         token = UserGenerator.generate_token(user)
@@ -33,8 +39,126 @@ class TestRetrieveUserInvitations:
             assert data['organisation']['id'] in org_ids
             assert data['role']['id'] == regular_user_id
 
+    def test_should_be_able_to_search_role_name(self, init_db, client,
+                                                saved_user_invitations):
+        run_test_precondition()
+        _, user, _, _, _ = saved_user_invitations(5)
+        org_objs, user, org_ids, invitations, regular_user_id = saved_user_invitations(
+            5, 'ADMIN', user=user)
+
+        token = UserGenerator.generate_token(user)
+
+        response_body = assert_paginator_data_values(
+            created_objs=invitations,
+            client=client,
+            token=token,
+            url=f'{USER_INVITATION_URL}?role.name_search=ADMIN',
+            success_msg=RETRIEVED.format('Invitations'),
+            current_page=1,
+            total_objects=5,
+            next_page=None,
+            prev_page=None,
+        )
+        for data in response_body['data']:
+            assert data['role']['name'] == 'ADMIN'
+            assert data['organisation']['id'] in org_ids
+
+    def test_should_perform_an_exact_match_when_searching_by_role_id(
+            self, init_db, client, saved_user_invitations):
+        run_test_precondition()
+        _, user, _, _, regular_user_id = saved_user_invitations(5)
+        org_objs, user, org_ids, invitations, admin_role_id = saved_user_invitations(
+            5, 'ADMIN', user=user)
+
+        token = UserGenerator.generate_token(user)
+
+        response_body = assert_paginator_data_values(
+            created_objs=invitations,
+            client=client,
+            token=token,
+            url=f'{USER_INVITATION_URL}?role_id_search={admin_role_id}',
+            success_msg=RETRIEVED.format('Invitations'),
+            current_page=1,
+            total_objects=5,
+            next_page=None,
+            prev_page=None,
+        )
+
+        excluding_last_letter = regular_user_id[0:-1]
+        response_body_2 = assert_paginator_data_values(
+            created_objs=invitations,
+            client=client,
+            token=token,
+            url=f'{USER_INVITATION_URL}?role_id_search={excluding_last_letter}',
+            success_msg=RETRIEVED.format('Invitations'),
+            current_page=1,
+            total_pages=0,
+            total_objects=0,
+            next_page=None,
+            prev_page=None,
+        )
+
+        for data in response_body['data']:
+            assert data['role']['name'] == 'ADMIN'
+            assert data['organisation']['id'] in org_ids
+
+        assert len(response_body_2['data']) == 0
+
+    def test_should_be_able_to_sort_by_role_name(self, init_db, client,
+                                                 saved_user_invitations):
+        run_test_precondition()
+        _, user, _, _, regular_user_id = saved_user_invitations(5)
+        org_objs, user, org_ids, invitations, admin_role_id = saved_user_invitations(
+            5, 'ADMIN', user=user)
+
+        token = UserGenerator.generate_token(user)
+
+        response_body = assert_paginator_data_values(
+            created_objs=invitations,
+            client=client,
+            token=token,
+            url=f'{USER_INVITATION_URL}?sort_by=+role.name',
+            success_msg=RETRIEVED.format('Invitations'),
+            current_page=1,
+            total_objects=10,
+            next_page=None,
+            prev_page=None,
+        )
+
+        response_body_two = assert_paginator_data_values(
+            created_objs=invitations,
+            client=client,
+            token=token,
+            url=f'{USER_INVITATION_URL}?sort_by=-role.name',
+            success_msg=RETRIEVED.format('Invitations'),
+            current_page=1,
+            total_objects=10,
+            next_page=None,
+            prev_page=None,
+        )
+        assert len(response_body['data']) == 10
+
+        first_five = response_body['data'][0:5]
+        last_five = response_body['data'][5:]
+
+        for admin_inv in first_five:
+            assert admin_inv['role']['name'] == 'ADMIN'
+        for regular_inv in last_five:
+            assert regular_inv['role']['name'] == 'REGULAR USERS'
+
+        # This is inverted
+        first_five_two = response_body_two['data'][0:5]
+        last_five_two = response_body_two['data'][5:]
+
+        for regular_inv in last_five_two:
+            assert regular_inv['role']['name'] == 'ADMIN'
+
+        for admin_inv in first_five_two:
+            assert admin_inv['role']['name'] == 'REGULAR USERS'
+
     def test_user_should_be_able_to_paginate_data(self, init_db, client,
                                                   saved_user_invitations):
+        run_test_precondition()
         total_invitations = 15
         page_num = 2
         page_limit = 5

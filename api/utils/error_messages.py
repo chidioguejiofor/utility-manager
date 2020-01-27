@@ -39,7 +39,7 @@ authentication_errors = {
     'invalid_auth_header':
     'Authorization token must be in format `Bearer token_value`',
     'forbidden':
-    "You don't have permission to {}",
+    "You don't have permission to perform this operation",
     'invalid_reset_link':
     'The reset link is invalid or has expired. Please try again'
 }

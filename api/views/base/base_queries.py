@@ -4,8 +4,13 @@ import numpy as np
 
 
 class BaseFilterMixin:
-    def extract_rel_model_and_col(self, model_column):
+    def join_col(self, query, rel_class):
+        if rel_class not in self._joined_fields:  # then do join only once
+            query = query.join(rel_class)
+            self._joined_fields.append(rel_class)
+        return query
 
+    def extract_rel_model_and_col(self, model_column):
         if '.' in model_column:
             rel, rel_name = model_column.split('.')
             model_class_col = getattr(self.__model__, rel)
@@ -30,7 +35,7 @@ class SearchFilterMixin(BaseFilterMixin):
 
                 if rel_args:
                     rel_class = rel_args[3]
-                    model_query = model_query.join(rel_class)
+                    model_query = self.join_col(model_query, rel_class)
             if col_filter is not None:
                 filter_condition.append(col_filter)
 
@@ -92,7 +97,6 @@ class PaginatorMixin(BaseFilterMixin):
         default_sort = self.SORT_KWARGS['defaults']
         order_by_list = []
         order_by = query_params.get('sort_by', default_sort)
-
         for order_by_str in order_by.split(','):
             field_name = order_by_str.strip()
             asc_or_desc = '+'
@@ -104,10 +108,11 @@ class PaginatorMixin(BaseFilterMixin):
                 if rel_args:
                     rel, rel_name, model_class_col, rel_class = rel_args
                     filter_field = getattr(rel_class, rel_name)
-                    query = query.join(rel_class)
+                    query = self.join_col(query, rel_class)
                 else:
                     filter_field = getattr(self.__model__, field_name)
-                filter_field = desc(filter_field) if asc_or_desc == '-' else filter_field
+                filter_field = desc(
+                    filter_field) if asc_or_desc == '-' else filter_field
                 order_by_list.append(expression.nullslast(filter_field))
 
         return query.order_by(*order_by_list)
@@ -147,5 +152,3 @@ class PaginatorMixin(BaseFilterMixin):
             'maxObjectsPerPage': paginated_query.per_page,
         }
         return paginated_query.items, meta
-
-

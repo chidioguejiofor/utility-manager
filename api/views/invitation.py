@@ -4,12 +4,11 @@ from flask import request
 from api.schemas import (InvitationRequestSchema, InvitationSchema,
                          MembershipIDOnlySchema,
                          InvitationRequestWithoutInvitesSchema)
-from api.models import Membership, Invitation, db
+from api.models import Membership, Invitation, User
 from api.utils.exceptions import ResponseException
 from api.utils.success_messages import INVITING_USER_MSG_DICT, RETRIEVED, ADDED_TO_ORG
-from api.utils.error_messages import invitation_errors, authentication_errors, serialization_error
+from api.utils.error_messages import invitation_errors, serialization_error
 from api.services.redis_util import RedisUtil
-from sqlalchemy import exc, orm
 
 
 @endpoint('/org/<string:org_id>/invitations')
@@ -48,32 +47,8 @@ class OrgInvitations(BaseOrgView, BasePaginatedView):
 
     def post(self, user_data, org_id, membership):
         request_data = request.get_json()
-        roles_user_cannot_send_invites = self.roles_that_cannot_be_sent_invites_by_current_user(
-            membership.role.name)
-
-        invitations = InvitationRequestSchema(
-            roles_user_cannot_send_invites=roles_user_cannot_send_invites,
-        ).load(request_data)
-
-        email_inputs = [invitation['email'] for invitation in invitations]
-
-        existing_emails = Invitation.query.filter(
-            Invitation.email.in_(email_inputs)).all()
-        existing_emails = set(inv.email for inv in existing_emails)
-        list_of_models = []
-        list_of_existing_emails = []
-        for inv in invitations:
-            if inv['email'] in existing_emails:
-                list_of_existing_emails.append({
-                    'email':
-                    inv['email'],
-                    'message':
-                    invitation_errors['invites_already_sent_to_email']
-                })
-            else:
-                list_of_models.append(Invitation(**inv,
-                                                 organisation_id=org_id))
-
+        list_of_existing_emails, list_of_models = self.extract_inv_model_list(
+            membership, org_id)
         invitations = Invitation.bulk_create_or_none(
             list_of_models,
             inviter_membership=membership,
@@ -91,6 +66,46 @@ class OrgInvitations(BaseOrgView, BasePaginatedView):
                                              'organisation']).dump(invitations)
         return self.generate_response(list_of_existing_emails, list_of_models,
                                       res_data)
+
+    def extract_inv_model_list(self, membership, org_id):
+        request_data = request.get_json()
+        roles_user_cannot_send_invites = self.roles_that_cannot_be_sent_invites_by_current_user(
+            membership.role.name)
+
+        invitations = InvitationRequestSchema(
+            roles_user_cannot_send_invites=roles_user_cannot_send_invites,
+        ).load(request_data)
+
+        email_inputs = [invitation['email'] for invitation in invitations]
+        existing_emails = Invitation.query.filter(
+            Invitation.email.in_(email_inputs)).all()
+        already_memberships = Membership.eager('member').filter(
+            Membership.organisation_id == org_id).join(User).filter(
+                User.email.in_(email_inputs)).all()
+        already_member_emails = set(mship.member.email
+                                    for mship in already_memberships)
+        existing_emails = set(inv.email for inv in existing_emails)
+        list_of_models = []
+        list_of_existing_emails = []
+        for inv in invitations:
+            if inv['email'] in existing_emails:
+                list_of_existing_emails.append({
+                    'email':
+                    inv['email'],
+                    'message':
+                    invitation_errors['invites_already_sent_to_email']
+                })
+            elif inv['email'] in already_member_emails:
+                list_of_existing_emails.append({
+                    'email':
+                    inv['email'],
+                    'message':
+                    invitation_errors['email_already_in_org']
+                })
+            else:
+                list_of_models.append(Invitation(**inv,
+                                                 organisation_id=org_id))
+        return list_of_existing_emails, list_of_models
 
     @staticmethod
     def generate_response(list_of_existing_emails, list_of_models, res_data):

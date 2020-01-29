@@ -45,6 +45,7 @@ class BasePaginatedView(SearchFilterMixin, PaginatorMixin):
     EAGER_LOADING_FIELDS = []
 
     def get(self, *args, **kwargs):
+        self._joined_fields = []  # used in BaseFilterMixin
         query_params = request.args
         query = self.search_model(query_params)
         query = self.filter_get_method_query(query, *args, **kwargs)

@@ -5,7 +5,7 @@ from .user import (User as UserSchema, ResetPasswordSchema,
 from .membership import (OrganisationMembership as
                          OrganisationMembershipSchema, UserMembership as
                          UserMembershipSchema, OrgAndMembershipSchema,
-                         MembershipIDOnlySchema)
+                         MembershipIDOnlySchema, OrgMembershipSchema)
 from .unit import Unit as UnitSchema
 from .parameter import Parameter as ParameterSchema
 from .role import Role as RoleSchema

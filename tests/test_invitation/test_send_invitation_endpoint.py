@@ -1,5 +1,5 @@
 from unittest.mock import patch, Mock
-from api.models import Membership, Role, Invitation, db
+from api.models import Membership, Role, Invitation, db, User, Organisation
 from api.utils.constants import APP_EMAIL
 from api.utils.error_messages import serialization_error, invitation_errors, authentication_errors
 from api.utils.success_messages import INVITING_USER_MSG_DICT
@@ -15,8 +15,13 @@ INVITE_KEY = 'invites'
 
 @patch('api.utils.emails.EmailUtil.SEND_CLIENT.send', autospec=True)
 class TestInviteUserToOrganisation:
-    def create_test_precondition(self, role_list, num_of_emails=3):
+    @staticmethod
+    def create_test_precondition(role_list, num_of_emails=3):
+        Membership.query.delete()
+        Organisation.query.delete()
+        User.query.delete()
         Invitation.query.delete()
+        db.session.commit()
         org = OrganisationGenerator.generate_model_obj(save=True,
                                                        verify_user=True)
         emails = []
@@ -328,7 +333,7 @@ class TestInviteUserToOrganisation:
                        signup_url=request_data['signupURL'])
             for inv in invitation_request[1:]  # from index 1 to the end
         ]
-        success_email = {*emails[0:]}
+        success_email = {*emails[:1]}
         failure_emails = {*emails[1:]}
         Invitation.bulk_create(invitation_models)
 
@@ -367,6 +372,115 @@ class TestInviteUserToOrganisation:
         assert_send_grid_mock_send(mock_email_send, [APP_EMAIL],
                                    num_of_calls=1,
                                    bccs=success_email)
+
+    def test_should_have_a_partial_success_when_some_emails_are_already_in_organisation(
+            self, mock_email_send, mock_send_html_delay, app, init_db, client):
+        regular_user_role_id = Role.query.filter_by(
+            name='REGULAR USERS').first().id
+        manager_role_id = Role.query.filter_by(name='MANAGER').first().id
+        org, emails, invitation_request, request_data = self.create_test_precondition(
+            [regular_user_role_id, manager_role_id], 3)
+        token = UserGenerator.generate_token(org.creator)
+
+        user_models = [
+            UserGenerator.generate_model_obj(email=inv['email'],
+                                             save=False,
+                                             verified=True)
+            for inv in invitation_request[1:]
+        ]
+
+        user_models = User.bulk_create(user_models, commit=True)
+
+        memberships = [
+            Membership(user_id=user.id,
+                       role_id=regular_user_role_id,
+                       organisation_id=org.id) for user in user_models
+        ]
+        Membership.bulk_create(memberships, commit=True)
+
+        success_email = {*emails[:1]}
+        failure_emails = {*emails[1:]}
+
+        client.set_cookie('/', 'token', token)
+        response = client.post(INVITATION_URL.format(org.id),
+                               data=json.dumps(request_data),
+                               content_type="application/json")
+        response_body = json.loads(response.data)
+
+        assert response.status_code == 207
+        assert response_body['status'] == 'partial'
+        assert len(response_body['data']['success']) == 1
+        assert len(response_body['data']['failed']) == 2
+        assert response_body['message'] == INVITING_USER_MSG_DICT['partial']
+
+        for res in response_body['data']['failed']:
+            assert res['email'] in failure_emails
+            assert res['message'] == invitation_errors['email_already_in_org']
+
+        for res in response_body['data']['success']:
+            assert res['email'] in success_email
+            assert res['userDashboardURL'] == request_data['userDashboardURL']
+            assert res['signupURL'] == request_data['signupURL']
+
+        # Check the the email calls were sent properly
+        assert mock_send_html_delay.called
+
+        subject, receivers, html = mock_send_html_delay.call_args[0]
+        blind_copies = mock_send_html_delay.call_args[1]['blind_copies']
+        assert mock_email_send.called
+        assert_send_grid_mock_send(mock_email_send,
+                                   receivers,
+                                   num_of_calls=1,
+                                   bccs=blind_copies)
+        assert_send_grid_mock_send(mock_email_send, [APP_EMAIL],
+                                   num_of_calls=1,
+                                   bccs=success_email)
+
+    def test_when_all_the_invites_are_already_in_org_all_should_fail(
+            self, mock_email_send, mock_send_html_delay, app, init_db, client):
+
+        regular_user_role_id = Role.query.filter_by(
+            name='REGULAR USERS').first().id
+        manager_role_id = Role.query.filter_by(name='MANAGER').first().id
+        org, emails, invitation_request, request_data = self.create_test_precondition(
+            [regular_user_role_id, manager_role_id], 3)
+
+        user_models = [
+            UserGenerator.generate_model_obj(email=inv['email'],
+                                             save=False,
+                                             verified=True)
+            for inv in invitation_request
+        ]
+
+        user_models = User.bulk_create(user_models, commit=True)
+
+        memberships = [
+            Membership(user_id=user.id,
+                       role_id=regular_user_role_id,
+                       organisation_id=org.id) for user in user_models
+        ]
+        Membership.bulk_create(memberships, commit=True)
+        emails = set(emails)
+        token = UserGenerator.generate_token(org.creator)
+
+        client.set_cookie('/', 'token', token)
+        response = client.post(INVITATION_URL.format(org.id),
+                               data=json.dumps(request_data),
+                               content_type="application/json")
+        response_body = json.loads(response.data)
+        assert response.status_code == 400
+        assert response_body['status'] == 'error'
+        assert len(response_body['data']['success']) == 0
+        assert len(response_body['data']['failed']) == 3
+        assert response_body['message'] == INVITING_USER_MSG_DICT['error']
+
+        for res in response_body['data']['failed']:
+            assert res['email'] in emails
+            assert res['message'] == invitation_errors['email_already_in_org']
+
+        # Check the the email calls were handled properly
+        assert not mock_send_html_delay.called
+        assert not mock_email_send.called
 
     def test_should_fail_when_duplicate_email_is_specified_in_request(
             self, mock_email_send, mock_send_html_delay, app, init_db, client):

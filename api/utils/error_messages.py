@@ -44,6 +44,10 @@ authentication_errors = {
     'The reset link is invalid or has expired. Please try again'
 }
 
+password_change_errors = {
+    'new_pass_and_change_pass_are_eq': 'Both currentPassword and newPassword should not be the same',
+    'current_pass_is_invalid': 'Current password you specified is not correct'
+}
 parameter_errors = {
     'invalid_validations': f'A maximum of 4 validations is allowed',
     'invalid_validation_format': 'Invalid validation format `{}`',

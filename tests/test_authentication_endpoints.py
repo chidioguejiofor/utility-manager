@@ -9,7 +9,7 @@ from .assertions import (assert_send_grid_mock_send,
 from api.utils.success_messages import (CREATED, LOGIN, CONFIRM_EMAIL_RESENT,
                                         REG_VERIFIED, RESET_PASS_MAIL,
                                         PASSWORD_CHANGED)
-from api.utils.error_messages import serialization_error, authentication_errors
+from api.utils.error_messages import serialization_error, authentication_errors, password_change_errors
 from api.utils.constants import CONFIRM_TOKEN, RESET_TOKEN
 from api.models import User
 from .mocks.user import UserGenerator
@@ -24,6 +24,7 @@ RESEND_EMAIL_ENDPOINT = 'api/auth/resend-email'
 CONFIRM_EMAIL_ENDPOINT = 'api/auth/confirm/{}'
 RESET_PASSWORD_ENDPOINT = 'api/auth/reset'
 CONFIRM_RESET_PASSWORD_ENDPOINT = 'api/auth/reset/confirm'
+CHANGE_PASSWORD_ENDPOINT = 'api/auth/password'
 
 
 class TestLogoutEndpoint:
@@ -47,6 +48,113 @@ class TestLogoutEndpoint:
         assert response.status_code == 200
         assert exp_value < datetime.now(tz=timezone.utc)
         assert 'token=deleted' in cookie
+
+
+class TestChangePasswordEndpoint:
+    def test_verified_user_should_change_password(self, init_db, client):
+        user = UserGenerator.generate_model_obj(save=True, verified=True)
+        new_password = "password!!1234"
+        user_data = {
+            "currentPassword": user.password,
+            "newPassword": new_password
+        }
+        token = UserGenerator.generate_token(user)
+        client.set_cookie('/', 'token', token)
+        response = client.patch(CHANGE_PASSWORD_ENDPOINT,
+                                data=json.dumps(user_data),
+                                content_type="application/json")
+        response_body = json.loads(response.data)
+        print(response_body)
+        assert response.status_code == 200
+        assert response_body['status'] == 'success'
+        assert response_body['message'] == PASSWORD_CHANGED
+
+        user = User.query.get(user.id)
+        assert user.verify_password(new_password)
+
+    def test_unverified_user_should_change_password(self, init_db, client):
+        user = UserGenerator.generate_model_obj(save=True, verified=False)
+        new_password = "password!!1234"
+        user_data = {
+            "currentPassword": user.password,
+            "newPassword": new_password
+        }
+        token = UserGenerator.generate_token(user)
+        client.set_cookie('/', 'token', token)
+        response = client.patch(CHANGE_PASSWORD_ENDPOINT,
+                                data=json.dumps(user_data),
+                                content_type="application/json")
+        response_body = json.loads(response.data)
+        assert response.status_code == 200
+        assert response_body['status'] == 'success'
+        assert response_body['message'] == PASSWORD_CHANGED
+
+        user = User.query.get(user.id)
+        assert user.verify_password(new_password)
+        assert user.verified is False
+
+    def test_should_throw_error_when_new_password_and_existing_password_are_same(
+            self, init_db, client):
+        user = UserGenerator.generate_model_obj(save=True, verified=True)
+        user_data = {
+            "currentPassword": user.password,
+            "newPassword": user.password,
+        }
+        token = UserGenerator.generate_token(user)
+        client.set_cookie('/', 'token', token)
+        response = client.patch(CHANGE_PASSWORD_ENDPOINT,
+                                data=json.dumps(user_data),
+                                content_type="application/json")
+        response_body = json.loads(response.data)
+        assert response.status_code == 400
+        assert response_body['status'] == 'error'
+        assert response_body['message'] == password_change_errors[
+            'new_pass_and_change_pass_are_eq']
+
+    def test_should_throw_error_when_current_password_is_not_the_user_password(
+            self, init_db, client):
+        user = UserGenerator.generate_model_obj(save=True, verified=True)
+        new_password = "password!!1234"
+        user_password = user.password
+        user_data = {
+            "currentPassword": 'some-jiberish',
+            "newPassword": new_password,
+        }
+        token = UserGenerator.generate_token(user)
+        client.set_cookie('/', 'token', token)
+        response = client.patch(CHANGE_PASSWORD_ENDPOINT,
+                                data=json.dumps(user_data),
+                                content_type="application/json")
+        response_body = json.loads(response.data)
+        assert response.status_code == 400
+        assert response_body['status'] == 'error'
+        assert response_body['message'] == password_change_errors[
+            'current_pass_is_invalid']
+
+        user = User.query.get(user.id)
+        assert user.verify_password(user_password)
+
+    def test_should_fail_when_schema_keys_are_invalid(self, init_db, client):
+        user = UserGenerator.generate_model_obj(save=True, verified=True)
+        user_password = user.password
+        user_data = {}
+        token = UserGenerator.generate_token(user)
+        client.set_cookie('/', 'token', token)
+        response = client.patch(CHANGE_PASSWORD_ENDPOINT,
+                                data=json.dumps(user_data),
+                                content_type="application/json")
+        response_body = json.loads(response.data)
+        assert response.status_code == 400
+        assert response_body['status'] == 'error'
+        assert response_body['message'] == serialization_error[
+            'invalid_field_data']
+        assert response_body['errors']['currentPassword'][
+            0] == serialization_error['required']
+        assert response_body['errors']['newPassword'][
+            0] == serialization_error['required']
+
+        user = User.query.get(user.id)
+        assert user.verify_password(user_password)
 
 
 class TestLoginEndpoint:

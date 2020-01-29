@@ -63,6 +63,9 @@ b
         des_value = re.sub("\\s{2,}", " ", des_value.strip())
         return des_value.capitalize() if self.capitalize else des_value
 
+class PasswordField(StringField):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, min_length=7, **kwargs)
 
 class IDField(StringField):
     def __init__(self, *args, **kwargs):

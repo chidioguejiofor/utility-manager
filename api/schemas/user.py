@@ -1,4 +1,5 @@
-from .base import AbstractSchemaWithTimeStampsMixin, ImageField, StringField, AlphaOnlyField, BaseSchema, AlphanumericField
+from .base import (AbstractSchemaWithTimeStampsMixin, ImageField, StringField,
+                   AlphaOnlyField, BaseSchema, AlphanumericField, PasswordField)
 from ..models import User as UserModel
 from marshmallow import fields
 
@@ -13,17 +14,20 @@ class ResetPasswordSchema(BaseSchema):
 
 class CompleteResetPasswordSchema(BaseSchema):
     __model__ = None
-    password = StringField(load_only=True, required=True)
+    password = PasswordField(load_only=True, required=True)
     reset_id = StringField(load_only=True, required=True, data_key='resetId')
 
 
 class LoginSchema(BaseSchema):
     __model__ = None
-    password = StringField(load_only=True, required=True)
+    password = PasswordField(load_only=True, required=True)
     username_or_email = StringField(load_only=True,
                                     required=True,
                                     data_key='usernameOrEmail')
 
+class ChangePasswordSchema(BaseSchema):
+    current_password =  PasswordField(load_only=True, required=True, data_key='currentPassword')
+    new_password =  PasswordField(load_only=True, required=True, data_key='newPassword')
 
 class ProfileSchema(BaseSchema):
     username = AlphanumericField(data_key="username",
@@ -71,5 +75,5 @@ class User(AbstractSchemaWithTimeStampsMixin, ResetPasswordSchema):
         data_key='image',
         load_only=True,
     )
-    password = StringField(load_only=True, required=True)
+    password = PasswordField(load_only=True, required=True)
     verified = fields.Boolean()

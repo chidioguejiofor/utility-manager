@@ -9,7 +9,7 @@ serialization_error = {
     "There are some fields data you provided that are invalid",
     'min_length_error': 'This field must be greater than {} characters',
     'max_length_error': 'This field must be less than {} characters',
-    'login_failed': 'Username or password was not found',
+    'login_failed': 'Invalid login Credentials',
     'email_not_found': 'The email you specified was not found',
     'already_verified': 'User has already been verified',
     'invalid_url': '`redirectURL` field must be a valid URL',
@@ -41,7 +41,9 @@ authentication_errors = {
     'forbidden':
     "You don't have permission to perform this operation",
     'invalid_reset_link':
-    'The reset link is invalid or has expired. Please try again'
+    'The reset link is invalid or has expired. Please try again',
+    'login_limit_reached':
+    'You have made too many login attempts. Please try again in about {} minutes',
 }
 
 parameter_errors = {

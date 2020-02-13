@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 import jwt
 from .base import BaseView, CookieGeneratorMixin
 from settings import endpoint
@@ -5,12 +6,12 @@ from flask import request, redirect, make_response
 
 from api.utils.error_messages import serialization_error, authentication_errors
 from api.utils.success_messages import REG_VERIFIED, CONFIRM_EMAIL_RESENT
-from api.utils.exceptions import ResponseException
+from api.utils.exceptions import ResponseException, LoginFailedException, LoginLimitExceeded
 from api.utils.token_validator import TokenValidator
 from api.models import User
 from api.schemas import UserSchema, LoginSchema
 from api.utils.success_messages import CREATED, LOGIN
-from api.utils.constants import CONFIRM_TOKEN
+from api.utils.constants import CONFIRM_TOKEN, FAILED_LOGIN_LIMITS
 from api.services.redis_util import RedisUtil
 
 
@@ -87,10 +88,24 @@ class ConfirmEmail(BaseView, CookieGeneratorMixin):
 
 @endpoint('/auth/login')
 class Login(BaseView, CookieGeneratorMixin):
+    def validate_login_limit(self, username_or_email):
+        number_of_tries = RedisUtil.hget('login', username_or_email)
+        if number_of_tries is None:
+            number_of_tries = 0
+        number_of_tries = int(number_of_tries)
+        if number_of_tries >= FAILED_LOGIN_LIMITS:
+            raise LoginLimitExceeded(
+                message=authentication_errors['login_limit_reached'].format(
+                    FAILED_LOGIN_LIMITS),
+                status_code=400,
+            )
+        return number_of_tries
+
     def post(self):
         user_data = LoginSchema().load(request.get_json())
         username_or_email = user_data['username_or_email']
         password = user_data['password']
+        number_of_tries = self.validate_login_limit(username_or_email)
         query_by_email = '@' in username_or_email
         if query_by_email:
             user = User.query.filter_by(email=username_or_email).first()
@@ -104,7 +119,11 @@ class Login(BaseView, CookieGeneratorMixin):
             resp.status_code = 200
             return self.generate_cookie(resp, user)
 
-        raise ResponseException(
+        expiry_duration = timedelta(minutes=5)
+        number_of_tries += 1
+        RedisUtil.hset('login', username_or_email, number_of_tries,
+                       expiry_duration)
+        raise LoginFailedException(
             message=serialization_error['login_failed'],
             status_code=400,
         )

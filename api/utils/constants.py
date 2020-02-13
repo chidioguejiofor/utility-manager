@@ -6,6 +6,7 @@ RESET_PASSWORD_SUBJECT = 'Reset Password'
 CONFIRM_TOKEN = 0
 LOGIN_TOKEN = 1
 RESET_TOKEN = 2
+FAILED_LOGIN_LIMITS = 6
 SENTRY_IGNORE_ERRORS = [
     'api.utils.exceptions.UniqueConstraintException',
     'api.utils.exceptions.ResponseException',

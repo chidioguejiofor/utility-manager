@@ -37,6 +37,17 @@ class RedisUtil:
             cls.REDIS.expire(key, int(expiry_time.total_seconds()))
 
     @classmethod
+    def hset(cls, hash_name, key, value, expiry_time=None):
+        custom_key = f'{hash_name}_{key}'
+        cls.REDIS.set(custom_key, value)
+        if expiry_time:
+            cls.REDIS.expire(custom_key, int(expiry_time.total_seconds()))
+
+    @classmethod
+    def hget(cls, hash_name, key):
+        return cls.REDIS.get(f'{hash_name}_{key}')
+
+    @classmethod
     def get_key(cls, key):
         """Retrieves the value of a redis key
 

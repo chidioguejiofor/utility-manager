@@ -1,6 +1,8 @@
 import dotenv
 import sentry_sdk
 from sentry_sdk.integrations.flask import FlaskIntegration
+from sentry_sdk.integrations.celery import CeleryIntegration
+
 import os
 import click
 from sqlalchemy import event
@@ -58,3 +60,5 @@ if flask_env in ['production', 'staging']:
                     integrations=[FlaskIntegration()],
                     ignore_errors=SENTRY_IGNORE_ERRORS,
                     environment=flask_env)
+    sentry_sdk.init(os.getenv('SENTRY_IO_URL'),
+                    integrations=[CeleryIntegration()])

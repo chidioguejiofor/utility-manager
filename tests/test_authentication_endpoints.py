@@ -12,6 +12,7 @@ from api.utils.success_messages import (CREATED, LOGIN, CONFIRM_EMAIL_RESENT,
 from api.utils.error_messages import serialization_error, authentication_errors
 from api.utils.constants import CONFIRM_TOKEN, RESET_TOKEN
 from api.models import User
+from api.services.redis_util import RedisUtil
 from .mocks.user import UserGenerator
 from .mocks.redis import RedisMock
 from dateutil import parser
@@ -69,6 +70,24 @@ class TestLoginEndpoint:
         assert user.last_name == response_data['lastName']
         assert response_body['status'] == 'success'
         assert response_body['message'] == LOGIN
+
+    def test_login_should_fail_when_the_user_has_logged_in_more_than_6_times(
+            self, init_db, client):
+        valid_user = UserGenerator.generate_model_obj(save=True)
+        user_data = {
+            'usernameOrEmail': valid_user.email,
+            'password': valid_user.password,
+        }
+        RedisUtil.hset('login', valid_user.email, 7)
+        response = client.post(LOGIN_URL,
+                               data=json.dumps(user_data),
+                               content_type="application/json")
+        response_body = json.loads(response.data)
+        assert response.status_code == 400
+        assert 'data' not in response_body
+        assert response_body['status'] == 'error'
+        assert response_body['message'] == \
+               authentication_errors['login_limit_reached'].format(6)
 
     def test_user_should_be_logged_in_once_correct_username_and_password_is_provided(
             self, init_db, client):

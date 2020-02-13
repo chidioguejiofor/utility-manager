@@ -12,6 +12,14 @@ class ResponseException(Exception):
         self.errors = errors
 
 
+class LoginLimitExceeded(ResponseException):
+    pass
+
+
+class LoginFailedException(ResponseException):
+    pass
+
+
 class ModelOperationException(Exception):
     def __init__(self, message, api_message, status_code=400, *args, **kwargs):
         super().__init__(message, *args, **kwargs)

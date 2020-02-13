@@ -12,6 +12,11 @@ class BaseModel(db.Model):
     __abstract__ = True
     __unique_constraints__ = []
     __unique_violation_msg__ = None
+    id = db.Column(db.String(21),
+                   primary_key=True,
+                   default=IDGenerator.generate_id)
+    created_at = db.Column(db.DateTime(timezone=True), default=TimeUtil.now)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=True)
 
     @declared_attr
     def __tablename__(cls):
@@ -29,11 +34,6 @@ class BaseModel(db.Model):
                     db.UniqueConstraint(column, name=constraint_name))
         return tuple(final_list)
 
-    id = db.Column(db.String(21),
-                   primary_key=True,
-                   default=IDGenerator.generate_id)
-    created_at = db.Column(db.DateTime(timezone=True), default=TimeUtil.now)
-    updated_at = db.Column(db.DateTime(timezone=True), nullable=True)
 
     def before_save(self, *args, **kwargs):
         pass

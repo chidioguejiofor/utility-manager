@@ -1,7 +1,7 @@
 import os
 import redis
-from api.models.base.id_generator import IDGenerator
-from api.models.role import Role
+from api.utils.id_generator import IDGenerator
+
 from tests.mocks.redis import RedisMock
 
 
@@ -9,7 +9,11 @@ class RedisUtil:
     REDIS = RedisMock
     if os.getenv('FLASK_ENV') != 'testing':
         REDIS = redis.from_url(os.getenv('REDIS_SERVER_URL'))
-        REDIS.flushall(True)
+
+    @classmethod
+    def set(cls, key, value, expiry_time=None):
+        cls.REDIS.set(key, value)
+        cls.REDIS.expire(key, int(expiry_time.total_seconds()))
 
     @classmethod
     def set_value(cls, value, expiry_time):
@@ -45,7 +49,25 @@ class RedisUtil:
 
     @classmethod
     def hget(cls, hash_name, key):
-        return cls.REDIS.get(f'{hash_name}_{key}')
+        value = cls.REDIS.get(f'{hash_name}_{key}')
+        if isinstance(value, bytes):
+            return value.decode('utf-8')
+        return value
+
+    @classmethod
+    def find_keys(cls, regex):
+        final_list = []
+        for key in cls.REDIS.keys(regex):
+            if isinstance(key, bytes):
+                key = key.decode('utf-8')
+            final_list.append(key)
+        return final_list
+
+    @classmethod
+    def delete_hash(cls, hash_name):
+        hash_keys = cls.find_keys(f'{hash_name}*')
+        for key in hash_keys:
+            cls.REDIS.delete(key)
 
     @classmethod
     def get_key(cls, key):
@@ -73,6 +95,7 @@ class RedisUtil:
 
     @classmethod
     def get_role_id(cls, role_name):
+        from api.models.role import Role
         role_key = f'ROLE_{role_name}'
         role_id = cls.get_key(role_key)
 

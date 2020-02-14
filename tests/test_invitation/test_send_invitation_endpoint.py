@@ -6,7 +6,7 @@ from api.utils.success_messages import INVITING_USER_MSG_DICT
 from tests.mocks.user import UserGenerator
 from tests.mocks.redis import RedisMock
 from tests.mocks.organisation import OrganisationGenerator
-from tests.assertions import assert_send_grid_mock_send
+from tests.assertions import assert_send_grid_mock_send, add_cookie_to_client
 import json
 
 INVITATION_URL = '/api/org/{}/invitations'
@@ -51,7 +51,7 @@ class TestInviteUserToOrganisation:
         emails = set(emails)
 
         token = UserGenerator.generate_token(org.creator)
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, org.creator, token)
         response = client.post(INVITATION_URL.format(org.id),
                                data=json.dumps(request_data),
                                content_type="application/json")
@@ -92,7 +92,7 @@ class TestInviteUserToOrganisation:
 
         token = UserGenerator.generate_token(
             org.creator)  # By default the creator becomes the owner
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, org.creator, token)
         client.post(INVITATION_URL.format(org.id),
                     data=json.dumps(request_data),
                     content_type="application/json")
@@ -114,7 +114,7 @@ class TestInviteUserToOrganisation:
                    role_id=admin_role_id).save()
 
         token = UserGenerator.generate_token(user)
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
         response = client.post(INVITATION_URL.format(org.id),
                                data=json.dumps(request_data),
                                content_type="application/json")
@@ -146,7 +146,7 @@ class TestInviteUserToOrganisation:
                    role_id=regular_user_role_id).save()
 
         token = UserGenerator.generate_token(user)
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
         response = client.post(INVITATION_URL.format(org.id),
                                data=json.dumps(request_data),
                                content_type="application/json")
@@ -175,7 +175,7 @@ class TestInviteUserToOrganisation:
                    role_id=admin_role_id).save()
 
         token = UserGenerator.generate_token(user)
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
         response = client.post(
             INVITATION_URL.format('invalid_id'),  # invalid org_id
             data=json.dumps(request_data),
@@ -200,7 +200,7 @@ class TestInviteUserToOrganisation:
             [owner_role_id, manager_role_id], 3)
 
         token = UserGenerator.generate_token(org.creator)
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, org.creator, token)
         response = client.post(INVITATION_URL.format(org.id),
                                data=json.dumps(request_data),
                                content_type="application/json")
@@ -232,7 +232,7 @@ class TestInviteUserToOrganisation:
             role_id=admin_role_id,
         ).save()
         token = UserGenerator.generate_token(user)
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
         response = client.post(INVITATION_URL.format(org.id),
                                data=json.dumps(request_data),
                                content_type="application/json")
@@ -271,8 +271,7 @@ class TestInviteUserToOrganisation:
         Invitation.bulk_create(invitation_models)
         emails = set(emails)
         token = UserGenerator.generate_token(org.creator)
-
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, org.creator, token)
         response = client.post(INVITATION_URL.format(org.id),
                                data=json.dumps(request_data),
                                content_type="application/json")
@@ -301,7 +300,8 @@ class TestInviteUserToOrganisation:
         org, emails, invitation_request, request_data = self.create_test_precondition(
             ['some-invalid_id', manager_role_id, regular_user_role_id], 3)
         token = UserGenerator.generate_token(org.creator)
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, org.creator, token)
+
         response = client.post(INVITATION_URL.format(org.id),
                                data=json.dumps(request_data),
                                content_type="application/json")
@@ -337,7 +337,8 @@ class TestInviteUserToOrganisation:
         failure_emails = {*emails[1:]}
         Invitation.bulk_create(invitation_models)
 
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, org.creator, token)
+
         response = client.post(INVITATION_URL.format(org.id),
                                data=json.dumps(request_data),
                                content_type="application/json")
@@ -401,7 +402,8 @@ class TestInviteUserToOrganisation:
         success_email = {*emails[:1]}
         failure_emails = {*emails[1:]}
 
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, org.creator, token)
+
         response = client.post(INVITATION_URL.format(org.id),
                                data=json.dumps(request_data),
                                content_type="application/json")
@@ -463,7 +465,8 @@ class TestInviteUserToOrganisation:
         emails = set(emails)
         token = UserGenerator.generate_token(org.creator)
 
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, org.creator, token)
+
         response = client.post(INVITATION_URL.format(org.id),
                                data=json.dumps(request_data),
                                content_type="application/json")
@@ -496,7 +499,8 @@ class TestInviteUserToOrganisation:
 
         token = UserGenerator.generate_token(org.creator)
 
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, org.creator, token)
+
         response = client.post(INVITATION_URL.format(org.id),
                                data=json.dumps(request_data),
                                content_type="application/json")
@@ -532,7 +536,7 @@ class TestInviteUserToOrganisation:
         request_data[INVITE_KEY][3] = {}
         token = UserGenerator.generate_token(org.creator)
 
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, org.creator, token)
         response = client.post(INVITATION_URL.format(org.id),
                                data=json.dumps(request_data),
                                content_type="application/json")
@@ -564,7 +568,8 @@ class TestInviteUserToOrganisation:
 
         token = UserGenerator.generate_token(org.creator)
 
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, org.creator, token)
+
         response = client.post(INVITATION_URL.format(org.id),
                                data=json.dumps(request_data),
                                content_type="application/json")

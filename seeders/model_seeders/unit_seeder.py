@@ -1,7 +1,7 @@
 import dateutil.parser
 import numpy as np
 from api.models import Unit
-from api.models.base.id_generator import IDGenerator
+from api.utils.id_generator import IDGenerator
 from datetime import datetime, timezone
 from .base import BaseSeeder
 

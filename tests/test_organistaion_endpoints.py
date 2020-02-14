@@ -1,13 +1,14 @@
 from unittest.mock import Mock, patch
 from api.models import Membership, Organisation, Role, db
-from api.utils.error_messages import serialization_error, authentication_errors
+from api.utils.error_messages import serialization_error
 from .mocks.user import UserGenerator
 from .mocks.organisation import OrganisationGenerator
 from .mocks.redis import RedisMock
-from .assertions import assert_unverified_user, assert_paginator_data_values
+from .assertions import assert_unverified_user, assert_paginator_data_values, add_cookie_to_client
 import math
 import json
 from api.utils.success_messages import RETRIEVED
+from api.utils.constants import COOKIE_TOKEN_KEY
 
 CREATE_ORG_URL = '/api/org/create'
 RETRIEVE_USER_ORGANISATIONS = '/api/user/orgs'
@@ -25,7 +26,7 @@ class TestCreateOrganisation:
         valid_data = OrganisationGenerator.generate_api_input_data()
         user = UserGenerator.generate_model_obj(verified=True, save=True)
         token = UserGenerator.generate_token(user)
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
         response = client.post(CREATE_ORG_URL,
                                data=valid_data,
                                content_type="multipart/form-data")
@@ -47,7 +48,7 @@ class TestCreateOrganisation:
         user = UserGenerator.generate_model_obj(verified=True, save=True)
         token = UserGenerator.generate_token(user)
         valid_data['website'] = org.website
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
         with open('tests/mocks/org_image.jpg', 'rb') as file:
             valid_data['logo'] = file
             response = client.post(CREATE_ORG_URL,
@@ -63,7 +64,7 @@ class TestCreateOrganisation:
         user = UserGenerator.generate_model_obj(verified=True, save=True)
         token = UserGenerator.generate_token(user)
 
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
 
         response = client.post(CREATE_ORG_URL,
                                data={},
@@ -90,7 +91,7 @@ class TestCreateOrganisation:
         user = UserGenerator.generate_model_obj(verified=True, save=True)
         token = UserGenerator.generate_token(user)
 
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
         with open('tests/mocks/org_image.jpg', 'rb') as file:
             valid_data['logo'] = file
             response = client.post(CREATE_ORG_URL,
@@ -113,12 +114,12 @@ class TestCreateOrganisation:
         valid_data = OrganisationGenerator.generate_api_input_data()
         user = UserGenerator.generate_model_obj(save=True)
         token = UserGenerator.generate_token(user)
-        client.set_cookie('/', 'token', token)
         assert_unverified_user(client,
                                token,
                                CREATE_ORG_URL,
                                method='post',
-                               data=valid_data)
+                               data=valid_data,
+                               user=user)
 
     def test_organisation_should_be_created_successfully_and_image_asynchronously_updated_when_input_data_is_valid(
             self, mock_destroy, mock_upload, app, init_db, client):
@@ -130,7 +131,7 @@ class TestCreateOrganisation:
         valid_data = OrganisationGenerator.generate_api_input_data()
         user = UserGenerator.generate_model_obj(verified=True, save=True)
         token = UserGenerator.generate_token(user)
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
         with open('tests/mocks/org_image.jpg', 'rb') as file:
             valid_data['logo'] = file
             response = client.post(CREATE_ORG_URL,
@@ -197,6 +198,7 @@ class TestRetrieveUserOrganisation:
 
         token = UserGenerator.generate_token(user)
         assert_paginator_data_values(
+            user=user,
             created_objs=org_objs,
             client=client,
             token=token,
@@ -217,6 +219,7 @@ class TestRetrieveUserOrganisation:
         token = UserGenerator.generate_token(user)
 
         assert_paginator_data_values(
+            user=user,
             created_objs=[],
             client=client,
             token=token,

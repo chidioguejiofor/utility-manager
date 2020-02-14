@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import Mock
 from settings import create_app
+
 from api.models import Unit
 from .mocks.organisation import OrganisationGenerator
 from .mocks.user import UserGenerator

@@ -1,10 +1,10 @@
-import math
 import json
 from api.models import Unit, ValueTypeEnum, Membership, Role
 from api.utils.error_messages import serialization_error, parameter_errors, authentication_errors
 from api.utils.success_messages import CREATED, RETRIEVED
 from .mocks.user import UserGenerator
-
+from api.utils.constants import COOKIE_TOKEN_KEY
+from .assertions import add_cookie_to_client
 PARAMETER_ENDPOINTS = '/api/org/{}/parameters'
 
 
@@ -21,7 +21,7 @@ class TestCreateParameterEndpointWithoutValidation:
         }
         token = UserGenerator.generate_token(user)
 
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
         response = client.post(PARAMETER_ENDPOINTS.format(org.id),
                                data=json.dumps(parameter_json),
                                content_type="application/json")
@@ -47,7 +47,7 @@ class TestCreateParameterEndpointWithoutValidation:
         }
         token = UserGenerator.generate_token(user_two_)
 
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
         response = client.post(PARAMETER_ENDPOINTS.format(org.id),
                                data=json.dumps(parameter_json),
                                content_type="application/json")
@@ -74,7 +74,7 @@ class TestCreateParameterEndpointWithoutValidation:
         }
         token = UserGenerator.generate_token(user_two_)
 
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
         response = client.post(PARAMETER_ENDPOINTS.format(org.id),
                                data=json.dumps(parameter_json),
                                content_type="application/json")
@@ -91,7 +91,7 @@ class TestCreateParameterEndpointWithoutValidation:
         parameter_json = {}
         token = UserGenerator.generate_token(user)
 
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
         response = client.post(PARAMETER_ENDPOINTS.format(org.id),
                                data=json.dumps(parameter_json),
                                content_type="application/json")
@@ -118,7 +118,7 @@ class TestCreateParameterEndpointWithValidation:
         }
         token = UserGenerator.generate_token(user)
 
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
         response = client.post(PARAMETER_ENDPOINTS.format(org.id),
                                data=json.dumps(parameter_json),
                                content_type="application/json")
@@ -145,7 +145,7 @@ class TestCreateParameterEndpointWithValidation:
         }
         token = UserGenerator.generate_token(user)
 
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
         response = client.post(PARAMETER_ENDPOINTS.format(org.id),
                                data=json.dumps(parameter_json),
                                content_type="application/json")
@@ -168,7 +168,7 @@ class TestCreateParameterEndpointWithValidation:
         }
         token = UserGenerator.generate_token(user)
 
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
         response = client.post(PARAMETER_ENDPOINTS.format(org.id),
                                data=json.dumps(parameter_json),
                                content_type="application/json")
@@ -191,7 +191,7 @@ class TestCreateParameterEndpointWithValidation:
         }
         token = UserGenerator.generate_token(user)
 
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
         response = client.post(PARAMETER_ENDPOINTS.format(org.id),
                                data=json.dumps(parameter_json),
                                content_type="application/json")
@@ -214,7 +214,7 @@ class TestCreateParameterEndpointWithValidation:
         }
         token = UserGenerator.generate_token(user)
 
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
         response = client.post(PARAMETER_ENDPOINTS.format(org.id),
                                data=json.dumps(parameter_json),
                                content_type="application/json")
@@ -237,7 +237,7 @@ class TestCreateParameterEndpointWithValidation:
         }
         token = UserGenerator.generate_token(user)
 
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
         response = client.post(PARAMETER_ENDPOINTS.format(org.id),
                                data=json.dumps(parameter_json),
                                content_type="application/json")
@@ -260,7 +260,7 @@ class TestCreateParameterEndpointWithValidation:
         }
         token = UserGenerator.generate_token(user)
 
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
         response = client.post(PARAMETER_ENDPOINTS.format(org.id),
                                data=json.dumps(parameter_json),
                                content_type="application/json")
@@ -283,7 +283,7 @@ class TestCreateParameterEndpointWithValidation:
         }
         token = UserGenerator.generate_token(user)
 
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
         response = client.post(PARAMETER_ENDPOINTS.format(org.id),
                                data=json.dumps(parameter_json),
                                content_type="application/json")
@@ -306,7 +306,7 @@ class TestCreateParameterEndpointWithValidation:
         }
         token = UserGenerator.generate_token(user)
 
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
         response = client.post(PARAMETER_ENDPOINTS.format(org.id),
                                data=json.dumps(parameter_json),
                                content_type="application/json")
@@ -328,7 +328,7 @@ class TestCreateParameterEndpointWithValidation:
         }
         token = UserGenerator.generate_token(user)
 
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
         response = client.post(PARAMETER_ENDPOINTS.format(org.id),
                                data=json.dumps(parameter_json),
                                content_type="application/json")
@@ -351,7 +351,7 @@ class TestCreateParameterEndpointWithValidation:
         }
         token = UserGenerator.generate_token(user)
 
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
         response = client.post(PARAMETER_ENDPOINTS.format(org.id),
                                data=json.dumps(parameter_json),
                                content_type="application/json")
@@ -374,7 +374,7 @@ class TestCreateParameterEndpointWithValidation:
         }
         token = UserGenerator.generate_token(user)
 
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
         response = client.post(PARAMETER_ENDPOINTS.format(org.id),
                                data=json.dumps(parameter_json),
                                content_type="application/json")

@@ -2,7 +2,7 @@ from api.utils.success_messages import RETRIEVED
 from api.utils.error_messages import authentication_errors
 from api.models import Membership, Organisation, db
 from tests.mocks.user import UserGenerator
-from tests.assertions import assert_paginator_data_values
+from tests.assertions import assert_paginator_data_values, add_cookie_to_client
 
 import json
 import math
@@ -26,6 +26,7 @@ class TestRetrieveUserInvitations:
             5)
         token = UserGenerator.generate_token(user)
         response_body = assert_paginator_data_values(
+            user=user,
             created_objs=invitations,
             client=client,
             token=token,
@@ -49,6 +50,7 @@ class TestRetrieveUserInvitations:
         token = UserGenerator.generate_token(user)
 
         response_body = assert_paginator_data_values(
+            user=user,
             created_objs=invitations,
             client=client,
             token=token,
@@ -73,6 +75,7 @@ class TestRetrieveUserInvitations:
         token = UserGenerator.generate_token(user)
 
         response_body = assert_paginator_data_values(
+            user=user,
             created_objs=invitations,
             client=client,
             token=token,
@@ -86,6 +89,7 @@ class TestRetrieveUserInvitations:
 
         excluding_last_letter = regular_user_id[0:-1]
         response_body_2 = assert_paginator_data_values(
+            user=user,
             created_objs=invitations,
             client=client,
             token=token,
@@ -114,6 +118,7 @@ class TestRetrieveUserInvitations:
         token = UserGenerator.generate_token(user)
 
         response_body = assert_paginator_data_values(
+            user=user,
             created_objs=invitations,
             client=client,
             token=token,
@@ -126,6 +131,7 @@ class TestRetrieveUserInvitations:
         )
 
         response_body_two = assert_paginator_data_values(
+            user=user,
             created_objs=invitations,
             client=client,
             token=token,
@@ -166,6 +172,7 @@ class TestRetrieveUserInvitations:
             total_invitations)
         token = UserGenerator.generate_token(user)
         response_body = assert_paginator_data_values(
+            user=user,
             created_objs=invitations,
             client=client,
             token=token,
@@ -192,6 +199,7 @@ class TestRetrieveOrganisationInvitations:
             5)
         token = UserGenerator.generate_token(org.creator)
         response_body = assert_paginator_data_values(
+            user=org.creator,
             created_objs=invitations,
             client=client,
             token=token,
@@ -213,6 +221,7 @@ class TestRetrieveOrganisationInvitations:
             total_invitations)
         token = UserGenerator.generate_token(org.creator)
         response_body = assert_paginator_data_values(
+            user=org.creator,
             created_objs=invitations,
             client=client,
             token=token,
@@ -247,7 +256,7 @@ class TestRetrieveOrganisationInvitations:
         ).save(commit=True)
 
         token = UserGenerator.generate_token(regular_user)
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, regular_user, token)
 
         response = client.get(
             f'{ORG_INVITATION_URL.format(org.id)}?page={page_num}&page_limit={page_limit}',

@@ -1,5 +1,6 @@
 import jwt
-from .base import BaseView
+from flask import make_response
+from .base import BaseView, CookieGeneratorMixin
 from settings import endpoint
 from flask import request
 
@@ -9,7 +10,7 @@ from api.utils.token_validator import TokenValidator
 from api.models import User
 from api.schemas import ResetPasswordSchema, CompleteResetPasswordSchema, ChangePasswordSchema
 from api.utils.success_messages import RESET_PASS_MAIL, PASSWORD_CHANGED
-from api.utils.constants import RESET_TOKEN, RESET_PASSWORD_SUBJECT
+from api.utils.constants import RESET_TOKEN, RESET_PASSWORD_SUBJECT, REDIS_TOKEN_HASH_KEY
 
 from api.services.redis_util import RedisUtil
 
@@ -38,7 +39,7 @@ class ForgotPassword(BaseView):
 
 
 @endpoint('/auth/reset/confirm')
-class ConfirmResetPassword(BaseView):
+class ConfirmResetPassword(BaseView, CookieGeneratorMixin):
     def patch(self):
         loaded_data = CompleteResetPasswordSchema().load(request.get_json())
         token = RedisUtil.get_key(loaded_data['reset_id'])
@@ -54,16 +55,21 @@ class ConfirmResetPassword(BaseView):
         user = User.query.get(token_data['id'])
         user.password = loaded_data['password']
         user.update()
-        return {'status': 'success', 'message': PASSWORD_CHANGED}
+        resp = make_response({
+            'status': 'success',
+            'message': PASSWORD_CHANGED
+        })
+        redis_hash = f'{user.id}_{REDIS_TOKEN_HASH_KEY}'
+        RedisUtil.delete_hash(redis_hash)
+        return self.generate_cookie(resp, None)
 
 
 @endpoint('/auth/password')
-class LoggedInUserChangePassword(BaseView):
+class LoggedInUserChangePassword(BaseView, CookieGeneratorMixin):
     protected_methods = ['PATCH']
     unverified_methods = ['PATCH']
 
-    @staticmethod
-    def patch(user_data):
+    def patch(self, user_data, **kwargs):
         data = ChangePasswordSchema().load(request.get_json())
         if data['current_password'] == data['new_password']:
             raise ResponseException(message=password_change_errors[
@@ -75,4 +81,10 @@ class LoggedInUserChangePassword(BaseView):
                 message=password_change_errors['current_pass_is_invalid'])
         user.password = data['new_password']
         user.update()
-        return {'status': 'success', 'message': PASSWORD_CHANGED}
+        resp = make_response({
+            'status': 'success',
+            'message': PASSWORD_CHANGED
+        })
+        redis_hash = f'{user.id}_{REDIS_TOKEN_HASH_KEY}'
+        RedisUtil.delete_hash(redis_hash)
+        return self.generate_cookie(resp, None)

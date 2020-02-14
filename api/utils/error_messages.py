@@ -25,13 +25,15 @@ serialization_error = {
 
 authentication_errors = {
     'token_expired':
-    'Token you specified has expired',
+    'Your session has expired. Please login again',
     'unverified_user':
     'Only verified users can access this',
     'session_expired':
     'Your session has expired',
     'token_invalid':
-    'Token you specified is invalid',
+    'Auth requirements are missing. Try logging in again.',
+    'token_error':
+    'Auth requirements are missing. Please login again',
     'missing_token':
     'Auth requirements are missing. Please login again',
     'confirmation_expired':
@@ -47,7 +49,8 @@ authentication_errors = {
 }
 
 password_change_errors = {
-    'new_pass_and_change_pass_are_eq': 'Both currentPassword and newPassword should not be the same',
+    'new_pass_and_change_pass_are_eq':
+    'Both currentPassword and newPassword should not be the same',
     'current_pass_is_invalid': 'Current password you specified is not correct'
 }
 parameter_errors = {

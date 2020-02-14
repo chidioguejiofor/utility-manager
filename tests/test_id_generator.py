@@ -1,4 +1,4 @@
-from api.models.base.id_generator import IDGenerator
+from api.utils.id_generator import IDGenerator
 from unittest.mock import patch
 
 

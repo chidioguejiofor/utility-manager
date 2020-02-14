@@ -1,12 +1,10 @@
 from api.utils.success_messages import ADDED_TO_ORG
-from api.utils.error_messages import authentication_errors, serialization_error
+from api.utils.error_messages import serialization_error
 from api.models import Membership
 from tests.mocks.user import UserGenerator
-
-from tests.assertions import assert_paginator_meta
+from tests.assertions import add_cookie_to_client
 
 import json
-import math
 
 USER_INVITATION_URL = '/api/user/invitations/{}/accept'
 
@@ -20,7 +18,7 @@ class TestUserAcceptInvitation:
             saved_user_invitations(1)
 
         token = UserGenerator.generate_token(user)
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
         response = client.post(USER_INVITATION_URL.format(invitations[0].id),
                                content_type="application/json")
         response_body = json.loads(response.data)
@@ -43,7 +41,7 @@ class TestUserAcceptInvitation:
         unknown_user = UserGenerator.generate_model_obj(save=True,
                                                         verified=True)
         token = UserGenerator.generate_token(unknown_user)
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
 
         response = client.post(USER_INVITATION_URL.format(invitations[0].id),
                                content_type="application/json")

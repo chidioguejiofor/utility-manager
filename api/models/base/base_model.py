@@ -5,7 +5,7 @@ from api.utils.exceptions import UniqueConstraintException
 from sqlalchemy.ext.declarative import declared_attr, AbstractConcreteBase
 from sqlalchemy import exc, orm
 import numpy as np
-from .id_generator import IDGenerator
+from api.utils.id_generator import IDGenerator
 
 
 class BaseModel(db.Model):
@@ -33,7 +33,6 @@ class BaseModel(db.Model):
                 final_list.append(
                     db.UniqueConstraint(column, name=constraint_name))
         return tuple(final_list)
-
 
     def before_save(self, *args, **kwargs):
         pass

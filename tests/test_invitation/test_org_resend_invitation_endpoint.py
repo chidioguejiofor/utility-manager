@@ -4,8 +4,7 @@ from api.utils.error_messages import authentication_errors, serialization_error
 from api.models import Membership
 from api.utils.constants import APP_EMAIL
 from tests.mocks.user import UserGenerator
-
-from tests.assertions import assert_send_grid_mock_send
+from tests.assertions import assert_send_grid_mock_send, add_cookie_to_client
 
 import json
 import math
@@ -24,7 +23,7 @@ class TestAdminResendInvitation:
             saved_organisation_invitations(1)
 
         token = UserGenerator.generate_token(org.creator)
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, org.creator, token)
         request_data = {
             "userDashboardURL": "http://localhost:8080/dashboard",
             "signupURL": "http://localhost:8080",
@@ -58,7 +57,7 @@ class TestAdminResendInvitation:
             saved_organisation_invitations(1)
 
         token = UserGenerator.generate_token(org.creator)
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, org.creator, token)
         request_data = {
             "userDashboardURL": "http://localhost:8080/dashboard",
             "signupURL": "http://localhost:8080",
@@ -87,7 +86,7 @@ class TestAdminResendInvitation:
             saved_organisation_invitations(1)
 
         token = UserGenerator.generate_token(org.creator)
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, org.creator, token)
         request_data = {
             "userDashboardURL": "http://localhost:8080/dashboard",
             "signupURL": "http://localhost:8080",

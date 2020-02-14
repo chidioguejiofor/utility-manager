@@ -1,11 +1,11 @@
 from unittest.mock import Mock, patch
 from .mocks.user import UserGenerator
-from .mocks.organisation import OrganisationGenerator
 from .assertions import assert_when_token_is_missing, assert_when_token_is_invalid
-import math
+from api.utils.constants import COOKIE_TOKEN_KEY
 import json
 from api.utils.success_messages import RETRIEVED, UPDATED
 from api.utils.error_messages import serialization_error
+from .assertions import add_cookie_to_client
 
 PROFILE_URL = '/api/user/profile'
 RETRIEVE_USER_ORGANISATIONS = '/api/user/orgs'
@@ -22,11 +22,12 @@ class TestGetProfile:
         user = UserGenerator.generate_model_obj(verified=True, save=True)
         token = UserGenerator.generate_token(user)
 
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
         response = client.get(PROFILE_URL, content_type="application/json")
         response_body = json.loads(response.data)
-        assert response.status_code == 200
         assert response_body['message'] == RETRIEVED.format('Profile')
+        assert response.status_code == 200
+
         assert response_body['status'] == 'success'
         assert response_body['data']['firstName'] == user.first_name
         assert response_body['data']['lastName'] == user.last_name
@@ -39,10 +40,11 @@ class TestGetProfile:
         user = UserGenerator.generate_model_obj(verified=False, save=True)
         token = UserGenerator.generate_token(user)
 
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
         response = client.get(PROFILE_URL, content_type="application/json")
         response_body = json.loads(response.data)
         assert response.status_code == 200
+
         assert response_body['message'] == RETRIEVED.format('Profile')
         assert response_body['status'] == 'success'
         assert response_body['data']['firstName'] == user.first_name
@@ -76,7 +78,7 @@ class TestUpdateProfile:
             side_effect=FileUploader.upload_file)
         user = UserGenerator.generate_model_obj(verified=True, save=True)
         token = UserGenerator.generate_token(user)
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
         valid_data = {
             'username': 'someNewUsername',
             'firstName': 'AbaBoy',
@@ -119,7 +121,7 @@ class TestUpdateProfile:
         user.image_public_id = prev_publick_id
         user.save()
         token = UserGenerator.generate_token(user)
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
         valid_data = {}
         with open('tests/mocks/org_image.jpg', 'rb') as file:
             valid_data['image'] = file
@@ -156,7 +158,7 @@ class TestUpdateProfile:
             side_effect=FileUploader.upload_file)
         user = UserGenerator.generate_model_obj(verified=True, save=True)
         token = UserGenerator.generate_token(user)
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
         valid_data = {
             'username': 'someNewUsername10',
             'firstName': 'AbaBoy',
@@ -191,7 +193,7 @@ class TestUpdateProfile:
             side_effect=FileUploader.upload_file)
         user = UserGenerator.generate_model_obj(verified=True, save=True)
         token = UserGenerator.generate_token(user)
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
         valid_data = {
             'username': 'me101Awesome',
         }
@@ -224,7 +226,7 @@ class TestUpdateProfile:
             side_effect=FileUploader.upload_file)
         user = UserGenerator.generate_model_obj(verified=True, save=True)
         token = UserGenerator.generate_token(user)
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
 
         response = client.patch(PROFILE_URL,
                                 data={},
@@ -256,7 +258,7 @@ class TestUpdateProfile:
             'username': user2.username,
             'firstName': 'SeniorBoy'
         }
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
 
         response = client.patch(PROFILE_URL,
                                 data=existing_username_data,
@@ -277,7 +279,7 @@ class TestUpdateProfile:
     def test_should_return_appropriate_message_when_token_is_invalid(
             self, mock_destroy, mock_upload, init_db, client,
             saved_org_and_user_generator):
-        client.set_cookie('/', 'token', 'invalid_token')
+        client.set_cookie('/', COOKIE_TOKEN_KEY, 'invalid_token')
         response = client.patch(PROFILE_URL, content_type="application/json")
 
         assert_when_token_is_invalid(response)

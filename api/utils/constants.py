@@ -7,6 +7,8 @@ CONFIRM_TOKEN = 0
 LOGIN_TOKEN = 1
 RESET_TOKEN = 2
 FAILED_LOGIN_LIMITS = 6
+COOKIE_TOKEN_KEY = 'T_KEY'
+REDIS_TOKEN_HASH_KEY = 'TOKEN'
 SENTRY_IGNORE_ERRORS = [
     'api.utils.exceptions.UniqueConstraintException',
     'api.utils.exceptions.ResponseException',

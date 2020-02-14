@@ -5,7 +5,7 @@ from abc import ABC
 
 import dateutil.parser
 from datetime import datetime, timezone
-from api.models.base.id_generator import IDGenerator
+from api.utils.id_generator import IDGenerator
 
 
 class BaseSeeder(ABC):

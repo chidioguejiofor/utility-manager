@@ -2,7 +2,18 @@ import json
 import math
 from api.utils.token_validator import TokenValidator
 from api.utils.error_messages import authentication_errors, serialization_error
-from api.utils.constants import CONFIRM_TOKEN
+from api.utils.constants import CONFIRM_TOKEN, COOKIE_TOKEN_KEY, REDIS_TOKEN_HASH_KEY
+from api.services.redis_util import RedisUtil
+from api.utils.id_generator import IDGenerator
+
+
+def add_cookie_to_client(client, user, token):
+    redis_hash = f'{user.id}_{REDIS_TOKEN_HASH_KEY}'
+    token_id = IDGenerator.generate_id()
+    RedisUtil.hset(redis_hash, token_id, token)
+
+    client.set_cookie('/', COOKIE_TOKEN_KEY, f'{user.id}/{token_id}')
+    return client
 
 
 def assert_send_grid_mock_send(mock_send,
@@ -60,7 +71,7 @@ def assert_when_token_is_missing(response):
 def assert_when_token_is_invalid(response):
     response_body = json.loads(response.data)
     assert response.status_code == 401
-    assert response_body['message'] == authentication_errors['token_invalid']
+    assert response_body['message'] == authentication_errors['token_error']
     assert response_body['status'] == 'error'
 
 
@@ -82,8 +93,8 @@ def assert_paginator_meta(response_body, **kwargs):
 
 
 def assert_paginator_data_values(*, client, token, url, created_objs,
-                                 success_msg, **kwargs):
-    client.set_cookie('/', 'token', token)
+                                 success_msg, user, **kwargs):
+    add_cookie_to_client(client, user, token)
     response = client.get(url, content_type="application/json")
 
     response_body = json.loads(response.data)
@@ -103,8 +114,8 @@ def assert_paginator_data_values(*, client, token, url, created_objs,
     return response_body
 
 
-def assert_unverified_user(client, token, url, method='get', data={}):
-    client.set_cookie('/', 'token', token)
+def assert_unverified_user(client, token, url, method='get', data={}, *, user):
+    add_cookie_to_client(client, user, token)
     response = getattr(client,
                        method.lower())(url,
                                        data=data,

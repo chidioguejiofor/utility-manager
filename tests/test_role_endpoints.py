@@ -1,6 +1,8 @@
 import math
 from api.models import Role
 from api.utils.success_messages import RETRIEVED
+from api.utils.constants import COOKIE_TOKEN_KEY
+from .assertions import add_cookie_to_client
 from .mocks.user import UserGenerator
 from .assertions import assert_paginator_data_values
 
@@ -19,6 +21,7 @@ class TestRetrieveRole:
         token, roles, user, org = self.create_test_precondition(
             saved_org_and_user_generator)
         assert_paginator_data_values(
+            user=user,
             created_objs=roles,
             client=client,
             token=token,
@@ -35,6 +38,7 @@ class TestRetrieveRole:
         page_limit = 1
         page = 2
         assert_paginator_data_values(
+            user=user,
             created_objs=roles,
             client=client,
             token=token,
@@ -55,8 +59,8 @@ class TestRetrieveRole:
         roles = Role.query.filter(Role.name.ilike(admin_role_name)).all()
         user, org = saved_org_and_user_generator
         token = UserGenerator.generate_token(user)
-        client.set_cookie('/', 'token', token)
         response_body = assert_paginator_data_values(
+            user=user,
             created_objs=roles,
             client=client,
             token=token,

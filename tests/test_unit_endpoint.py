@@ -3,9 +3,10 @@ import json
 from api.models import Unit, Membership, Role, db
 from api.utils.error_messages import serialization_error, authentication_errors
 from api.utils.success_messages import CREATED, RETRIEVED
+from api.utils.constants import COOKIE_TOKEN_KEY
 from .mocks.user import UserGenerator
 from .mocks.organisation import OrganisationGenerator
-from .assertions import assert_paginator_data_values, assert_user_not_in_organisation
+from .assertions import assert_paginator_data_values, assert_user_not_in_organisation, add_cookie_to_client
 
 UNITS_ENDPOINT = '/api/org/{}/units'
 
@@ -22,7 +23,7 @@ class TestCreateUnitEndpoint:
         }
         token = UserGenerator.generate_token(user)
 
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
         response = client.post(UNITS_ENDPOINT.format(org.id),
                                data=json.dumps(unit_json),
                                content_type="application/json")
@@ -53,7 +54,7 @@ class TestCreateUnitEndpoint:
 
         token = UserGenerator.generate_token(user)
 
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
         response = client.post(UNITS_ENDPOINT.format(org.id),
                                data=json.dumps(unit_json),
                                content_type="application/json")
@@ -77,7 +78,7 @@ class TestCreateUnitEndpoint:
         }
         token = UserGenerator.generate_token(user_two)
 
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
         response = client.post(UNITS_ENDPOINT.format(org.id),
                                data=json.dumps(unit_json),
                                content_type="application/json")
@@ -102,7 +103,7 @@ class TestCreateUnitEndpoint:
         }
         token = UserGenerator.generate_token(user)
 
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
         response = client.post(UNITS_ENDPOINT.format(org.id),
                                data=json.dumps(unit_json),
                                content_type="application/json")
@@ -118,7 +119,7 @@ class TestCreateUnitEndpoint:
         unit_json = {}
         token = UserGenerator.generate_token(user)
 
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
         response = client.post(UNITS_ENDPOINT.format(org.id),
                                data=json.dumps(unit_json),
                                content_type="application/json")
@@ -150,7 +151,8 @@ class TestRetrieveUnit:
                                        saved_org_and_user_generator):
         unit_json, token, user, org = self.create_test_precondition(
             unit_objs, init_db, saved_org_and_user_generator)
-        assert_paginator_data_values(created_objs=unit_objs,
+        assert_paginator_data_values(user=user,
+                                     created_objs=unit_objs,
                                      client=client,
                                      token=token,
                                      url=UNITS_ENDPOINT.format(org.id),
@@ -162,7 +164,7 @@ class TestRetrieveUnit:
             unit_objs, init_db, saved_org_and_user_generator)
         org_two = OrganisationGenerator.generate_model_obj(save=True)
 
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
         response = client.get(
             f'{UNITS_ENDPOINT.format(org_two.id)}?name_search=SomeOrg2Unit',
             content_type="application/json")
@@ -189,6 +191,7 @@ class TestRetrieveUnit:
 
         # org
         assert_paginator_data_values(
+            user=user,
             created_objs=unit_objs,
             client=client,
             token=token,
@@ -204,6 +207,7 @@ class TestRetrieveUnit:
 
         # org_two
         assert_paginator_data_values(
+            user=user,
             created_objs=unit_objs,
             client=client,
             token=token,
@@ -224,6 +228,7 @@ class TestRetrieveUnit:
             unit_objs, init_db, saved_org_and_user_generator)
 
         assert_paginator_data_values(
+            user=user,
             created_objs=unit_objs,
             client=client,
             token=token,
@@ -244,6 +249,7 @@ class TestRetrieveUnit:
             unit_objs, init_db, saved_org_and_user_generator)
 
         response_body = assert_paginator_data_values(
+            user=user,
             created_objs=unit_objs,
             client=client,
             token=token,
@@ -267,6 +273,7 @@ class TestRetrieveUnit:
             unit_objs, init_db, saved_org_and_user_generator)
 
         response_body = assert_paginator_data_values(
+            user=user,
             created_objs=unit_objs,
             client=client,
             token=token,
@@ -289,6 +296,7 @@ class TestRetrieveUnit:
             unit_objs, init_db, saved_org_and_user_generator)
 
         response_body = assert_paginator_data_values(
+            user=user,
             created_objs=unit_objs,
             client=client,
             token=token,
@@ -310,6 +318,7 @@ class TestRetrieveUnit:
         unit_json, token, user, org = self.create_test_precondition(
             unit_objs, init_db, saved_org_and_user_generator)
         response_body = assert_paginator_data_values(
+            user=user,
             created_objs=unit_objs,
             client=client,
             token=token,

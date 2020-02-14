@@ -4,13 +4,13 @@ from api.utils.token_validator import TokenValidator
 from .assertions import (assert_send_grid_mock_send,
                          assert_successful_response,
                          assert_when_token_is_missing,
-                         assert_when_token_is_invalid,
+                         assert_when_token_is_invalid, add_cookie_to_client,
                          assert_reg_confirm_email_was_sent_properly)
 from api.utils.success_messages import (CREATED, LOGIN, CONFIRM_EMAIL_RESENT,
                                         REG_VERIFIED, RESET_PASS_MAIL,
                                         PASSWORD_CHANGED)
 from api.utils.error_messages import serialization_error, authentication_errors, password_change_errors
-from api.utils.constants import CONFIRM_TOKEN, RESET_TOKEN
+from api.utils.constants import CONFIRM_TOKEN, RESET_TOKEN, COOKIE_TOKEN_KEY, REDIS_TOKEN_HASH_KEY
 from api.models import User
 from api.services.redis_util import RedisUtil
 from .mocks.user import UserGenerator
@@ -36,7 +36,7 @@ class TestLogoutEndpoint:
         user.redirect_url = redirect_url
         user.update()
         token = UserGenerator.generate_token(user, token_type=CONFIRM_TOKEN)
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
         response = client.delete(LOGIN_URL)
 
         cookie = response.headers.get('Set-Cookie')
@@ -48,7 +48,7 @@ class TestLogoutEndpoint:
                 break
         assert response.status_code == 200
         assert exp_value < datetime.now(tz=timezone.utc)
-        assert 'token=deleted' in cookie
+        assert f'{COOKIE_TOKEN_KEY}=deleted' in cookie
 
 
 class TestChangePasswordEndpoint:
@@ -60,7 +60,7 @@ class TestChangePasswordEndpoint:
             "newPassword": new_password
         }
         token = UserGenerator.generate_token(user)
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
         response = client.patch(CHANGE_PASSWORD_ENDPOINT,
                                 data=json.dumps(user_data),
                                 content_type="application/json")
@@ -73,6 +73,39 @@ class TestChangePasswordEndpoint:
         user = User.query.get(user.id)
         assert user.verify_password(new_password)
 
+    def test_when_a_password_is_changed_user_should_be_logged_out(
+            self, init_db, client):
+        user = UserGenerator.generate_model_obj(save=True, verified=True)
+        new_password = "password!!1234"
+        user_data = {
+            "currentPassword": user.password,
+            "newPassword": new_password
+        }
+        token = UserGenerator.generate_token(user)
+        add_cookie_to_client(client, user, token)
+        redis_hash = f'{user.id}_{REDIS_TOKEN_HASH_KEY}'
+        assert len(RedisMock.keys(f'{redis_hash}*')) > 0
+        response = client.patch(CHANGE_PASSWORD_ENDPOINT,
+                                data=json.dumps(user_data),
+                                content_type="application/json")
+
+        assert response.status_code == 200
+        user = User.query.get(user.id)
+        assert user.verify_password(new_password)
+
+        cookie = response.headers.get('Set-Cookie')
+        cookie_args = cookie.split(';')
+        exp_value = None
+        for arg in cookie_args:
+            if 'Expires' in arg or 'expires' in arg:
+                exp_value = parser.parse(arg.split('=')[1])
+                break
+        assert exp_value < datetime.now(tz=timezone.utc)
+        assert f'{COOKIE_TOKEN_KEY}=deleted' in cookie
+
+        # This checks that the redis cache was cleared for that user
+        assert len(RedisMock.keys(f'{redis_hash}*')) == 0
+
     def test_unverified_user_should_change_password(self, init_db, client):
         user = UserGenerator.generate_model_obj(save=True, verified=False)
         new_password = "password!!1234"
@@ -81,7 +114,7 @@ class TestChangePasswordEndpoint:
             "newPassword": new_password
         }
         token = UserGenerator.generate_token(user)
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
         response = client.patch(CHANGE_PASSWORD_ENDPOINT,
                                 data=json.dumps(user_data),
                                 content_type="application/json")
@@ -102,7 +135,7 @@ class TestChangePasswordEndpoint:
             "newPassword": user.password,
         }
         token = UserGenerator.generate_token(user)
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
         response = client.patch(CHANGE_PASSWORD_ENDPOINT,
                                 data=json.dumps(user_data),
                                 content_type="application/json")
@@ -122,7 +155,7 @@ class TestChangePasswordEndpoint:
             "newPassword": new_password,
         }
         token = UserGenerator.generate_token(user)
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
         response = client.patch(CHANGE_PASSWORD_ENDPOINT,
                                 data=json.dumps(user_data),
                                 content_type="application/json")
@@ -140,7 +173,7 @@ class TestChangePasswordEndpoint:
         user_password = user.password
         user_data = {}
         token = UserGenerator.generate_token(user)
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
         response = client.patch(CHANGE_PASSWORD_ENDPOINT,
                                 data=json.dumps(user_data),
                                 content_type="application/json")
@@ -325,7 +358,7 @@ class TestResendEmail:
         user = UserGenerator.generate_model_obj(save=True)
         token = UserGenerator.generate_token(user)
 
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
         response = client.post(RESEND_EMAIL_ENDPOINT,
                                data=valid_data,
                                content_type="application/json")
@@ -334,7 +367,11 @@ class TestResendEmail:
                                    CONFIRM_EMAIL_RESENT.format(user.email))
         html_content = assert_send_grid_mock_send(mock_send, user.email)
 
-        set_key = list(RedisMock.cache.keys())[0]  # the only key in token_key
+        set_key = None
+        for key in RedisMock.cache.keys():
+            if REDIS_TOKEN_HASH_KEY not in key:
+                set_key = key
+                break
         exp_key = list(
             RedisMock.expired_cache.keys())[0]  # the only key in expired_key
 
@@ -354,7 +391,7 @@ class TestResendEmail:
         valid_data = json.dumps({'redirectURL': 'ftp://here.com'})
         user = UserGenerator.generate_model_obj(save=True)
         token = UserGenerator.generate_token(user)
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
         response = client.post(RESEND_EMAIL_ENDPOINT,
                                data=valid_data,
                                content_type="application/json")
@@ -375,7 +412,7 @@ class TestResendEmail:
         user.verified = True
         user.save()
         token = UserGenerator.generate_token(user)
-        client.set_cookie('/', 'token', token)
+        add_cookie_to_client(client, user, token)
         response = client.post(RESEND_EMAIL_ENDPOINT,
                                data=valid_data,
                                content_type="application/json")
@@ -397,7 +434,8 @@ class TestResendEmail:
 
     def test_it_should_fail_when_token_is_invalid(self, mock_send, init_db,
                                                   client):
-        client.set_cookie('/', 'token', 'some-invalid-token')
+
+        client.set_cookie('/', COOKIE_TOKEN_KEY, 'some-invalid-token')
         response = client.post(RESEND_EMAIL_ENDPOINT,
                                content_type="application/json")
         assert_when_token_is_invalid(response)
@@ -417,6 +455,9 @@ class TestConfirmResetPassword:
             'password': new_password,
             'resetId': mock_reset_id
         })
+        redis_hash = f'{user.id}_{REDIS_TOKEN_HASH_KEY}'
+        RedisUtil.hset(redis_hash, 'some_token_value', 'some-valid-token')
+        assert len(RedisMock.keys(f'{redis_hash}*')) > 0
 
         assert RedisMock.get(mock_reset_id) == token
         response = client.patch(CONFIRM_RESET_PASSWORD_ENDPOINT,
@@ -430,6 +471,9 @@ class TestConfirmResetPassword:
         assert user.verify_password(new_password)
         assert response.status_code == 200
         assert response_body['message'] == PASSWORD_CHANGED
+
+        # Check that the user tokens were all cleared after password change
+        assert len(RedisMock.keys(f'{redis_hash}*')) == 0
 
     def test_error_message_should_be_sent_when_password_is_not_provided(
             self, init_db, client):
@@ -517,7 +561,11 @@ class TestResetPassword:
                                    RESET_PASS_MAIL.format(user.email))
         html_content = assert_send_grid_mock_send(mock_send, user.email)
 
-        set_key = list(RedisMock.cache.keys())[0]
+        set_key = None
+        for key in RedisMock.cache.keys():
+            if REDIS_TOKEN_HASH_KEY not in key:
+                set_key = key
+                break
         reset_id = list(RedisMock.expired_cache.keys())[0]
         exp_duration = RedisMock.expired_cache[reset_id]
         token = RedisMock.get(set_key)

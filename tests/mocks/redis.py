@@ -1,3 +1,6 @@
+import re
+
+
 class RedisMock:
     cache = {}
     expired_cache = {}
@@ -10,6 +13,15 @@ class RedisMock:
     def delete(cls, key):
         if key in cls.cache:
             del cls.cache[key]
+
+    @classmethod
+    def keys(cls, regex):
+        matching_keys = []
+
+        for key in cls.cache.keys():
+            if re.match(regex, key):
+                matching_keys.append(key)
+        return matching_keys
 
     @classmethod
     def get(cls, key):

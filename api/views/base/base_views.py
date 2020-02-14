@@ -6,7 +6,9 @@ from api.utils.token_validator import TokenValidator
 from api.utils.constants import LOGIN_TOKEN
 from datetime import timedelta, datetime
 from .decoratorators import Authentication, OrgViewDecorator
-from api.models import Organisation
+from api.services.redis_util import RedisUtil
+from api.utils.constants import COOKIE_TOKEN_KEY, REDIS_TOKEN_HASH_KEY
+from api.utils.id_generator import IDGenerator
 
 
 class classproperty(object):
@@ -76,7 +78,7 @@ class CookieGeneratorMixin:
 
        """
         secure_flag = os.getenv('FLASK_ENV') == 'production'
-        token = 'deleted'
+        cookie_value = 'deleted'
         expires = datetime.now() - timedelta(days=100)
         if user:
             payload = {
@@ -86,10 +88,16 @@ class CookieGeneratorMixin:
                 'username': user.username,
                 "verified": user.verified,
             }
+            expires_in = timedelta(days=5)
             token = TokenValidator.create_token(payload)
-            expires = datetime.now() + timedelta(days=100)
-        resp.set_cookie('token',
-                        token,
+            token_id = IDGenerator.generate_id()
+            redis_hash = f'{user.id}_{REDIS_TOKEN_HASH_KEY}'
+            RedisUtil.hset(redis_hash, token_id, token, expires_in)
+            cookie_value = f'{user.id}/{token_id}'
+            expires = datetime.now() + expires_in
+
+        resp.set_cookie(COOKIE_TOKEN_KEY,
+                        cookie_value,
                         path='/',
                         httponly=True,
                         secure=secure_flag,

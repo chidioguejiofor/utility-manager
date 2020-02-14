@@ -1,10 +1,9 @@
 from api.utils.exceptions import ResponseException
 from api.utils.token_validator import TokenValidator
 from api.utils.error_messages import authentication_errors, serialization_error
-from api.utils.constants import LOGIN_TOKEN
+from api.utils.constants import LOGIN_TOKEN, COOKIE_TOKEN_KEY, REDIS_TOKEN_HASH_KEY
 from api.models import Membership
 
-from sqlalchemy import orm
 from functools import wraps
 from flask import request
 
@@ -25,12 +24,17 @@ class Authentication:
         Returns:
             dict, str: The decoded token data
         """
-        token = request.cookies.get('token')
-        if not token:
+        from api.services.redis_util import RedisUtil
+        cookie_value = request.cookies.get(COOKIE_TOKEN_KEY)
+
+        if not cookie_value or len(cookie_value.split('/')) != 2:
             raise ResponseException(
-                authentication_errors['missing_token'],
+                authentication_errors['token_error'],
                 401,
             )
+        user_id, token_id = cookie_value.split('/')
+        redis_hash = f'{user_id}_{REDIS_TOKEN_HASH_KEY}'
+        token = RedisUtil.hget(redis_hash, token_id)
         decoded_data = TokenValidator.decode_token_data(token,
                                                         token_type=LOGIN_TOKEN)
         if check_user_is_verified and not decoded_data['verified']:

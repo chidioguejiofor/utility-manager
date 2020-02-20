@@ -1,7 +1,7 @@
 import os
 import redis
 from api.utils.id_generator import IDGenerator
-
+from api.models.role import Role
 from tests.mocks.redis import RedisMock
 
 

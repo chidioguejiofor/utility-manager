@@ -1,21 +1,17 @@
 from settings import db
-from .base import BaseModel
+from .base import OrgBaseModel
 from api.utils.constants import APP_EMAIL
 
 
-class Invitation(BaseModel):
+class Invitation(OrgBaseModel):
+    _ORG_ID_NULLABLE = False
     email = db.Column(db.String(320), nullable=False)
     role_id = db.Column(db.String(21),
                         db.ForeignKey('Role.id'),
                         nullable=False)
     user_dashboard_url = db.Column(db.TEXT, nullable=False)
     signup_url = db.Column(db.TEXT, nullable=False)
-    organisation_id = db.Column(db.String(21),
-                                db.ForeignKey('Organisation.id',
-                                              ondelete='CASCADE'),
-                                nullable=False)
     role = db.relationship('Role')
-    organisation = db.relationship('Organisation')
 
     __unique_constraints__ = ((('email', 'organisation_id'),
                                'invitation_email_org_constraint'), )

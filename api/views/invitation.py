@@ -1,5 +1,5 @@
 from .base import BaseView, BasePaginatedView, BaseOrgView
-from settings import endpoint
+from settings import org_endpoint, endpoint
 from flask import request
 from api.schemas import (InvitationRequestSchema, InvitationSchema,
                          MembershipIDOnlySchema,
@@ -11,7 +11,7 @@ from api.utils.error_messages import invitation_errors, serialization_error
 from api.services.redis_util import RedisUtil
 
 
-@endpoint('/org/<string:org_id>/invitations')
+@org_endpoint('/invitations')
 class OrgInvitations(BaseOrgView, BasePaginatedView):
     __model__ = Invitation
     # auth_settings
@@ -154,7 +154,7 @@ class OrgInvitations(BaseOrgView, BasePaginatedView):
         return roles_not_allowed
 
 
-@endpoint('/org/<string:org_id>/invitations/<string:invitation_id>/resend')
+@org_endpoint('/invitations/<string:invitation_id>/resend')
 class ResendInvitation(BaseOrgView):
     protected_methods = ['POST']
     # org view settings
@@ -232,7 +232,7 @@ class AcceptInvitation(BaseView):
             role_id=invitation.role.id,
             organisation_id=invitation.organisation_id,
         )
-        membersip.save(commit=False, generate_id=True)
+        membersip.save(commit=False)
         final_response = MembershipIDOnlySchema(
             exclude=['user_id']).dump_success_data(membersip, ADDED_TO_ORG)
         invitation.delete(commit=True)

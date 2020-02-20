@@ -40,7 +40,7 @@ class BaseModel(db.Model):
     def after_save(self, *args, **kwargs):
         pass
 
-    def save(self, commit=True, generate_id=False):
+    def save(self, commit=True):
         """Saves a new model to the session
 
         If commit is True it updates the database with new changes else it saves it just
@@ -51,7 +51,6 @@ class BaseModel(db.Model):
 
         Args:
             commit(bool, optional): If True upates database with model
-            generate_id(bool, optional): If True generates Id in this function else
             allows auto generate hook to handle it
 
         Raise:
@@ -59,8 +58,7 @@ class BaseModel(db.Model):
         """
         self.before_save()
         self._valid_unique_constraints(self)
-        if generate_id:
-            self.id = IDGenerator.generate_id()
+        self.id = IDGenerator.generate_id()
 
         db.session.add(self)
         if commit:
@@ -193,6 +191,21 @@ class BaseModel(db.Model):
         return model_objs
 
 
+class OrgBaseModel(BaseModel):
+    __abstract__ = True
+    _ORG_ID_NULLABLE = True
+
+    @declared_attr
+    def organisation_id(cls):
+        return db.Column(db.String(21),
+                         db.ForeignKey('Organisation.id', ondelete='CASCADE'),
+                         nullable=cls._ORG_ID_NULLABLE)
+
+    @declared_attr
+    def organisation(self):
+        return db.relationship('Organisation')
+
+
 class UserActionBase(AbstractConcreteBase):
     __back_populates__kwargs__ = None  # should be overriden in concrete class
 
@@ -216,12 +229,12 @@ class UserActionBase(AbstractConcreteBase):
     def created_by(cls):
         return db.relationship(
             'User',
-            back_populates=cls.__back_populates__kwargs__['created_by'],
+            # back_populates=cls.__back_populates__kwargs__['created_by'],
             foreign_keys=[cls.created_by_id])
 
     @declared_attr
     def updated_by(cls):
         return db.relationship(
             'User',
-            back_populates=cls.__back_populates__kwargs__['updated_by'],
+            # back_populates=cls.__back_populates__kwargs__['updated_by'],
             foreign_keys=[cls.updated_by_id])

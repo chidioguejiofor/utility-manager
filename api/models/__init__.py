@@ -6,3 +6,4 @@ from .membership import Membership
 from .parameter import Parameter, ValueType as ValueTypeEnum
 from .role import Role
 from .invitation import Invitation
+from .appliance_category import ApplianceCategory

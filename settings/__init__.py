@@ -13,9 +13,14 @@ from .error_handlers import create_error_handlers
 db = SQLAlchemy()
 dotenv.load_dotenv()
 api_blueprint = Blueprint('api_bp', __name__, url_prefix='/api')
+org_blueprint = Blueprint('org_bp',
+                          __name__,
+                          url_prefix='/api/org/<string:org_id>')
 bp = Blueprint('errors', __name__)
 router = Api(api_blueprint)
+org_router = Api(org_blueprint)
 endpoint = router.route
+org_endpoint = org_router.route
 
 
 def create_app(current_env=os.getenv('FLASK_ENV', 'production')):
@@ -37,6 +42,7 @@ def create_app(current_env=os.getenv('FLASK_ENV', 'production')):
 
     app.register_blueprint(api_blueprint)
     app.register_blueprint(bp)
+    app.register_blueprint(org_blueprint)
     import api.views
     import api.models as models
     tables_in_my_app = [

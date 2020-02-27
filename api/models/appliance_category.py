@@ -4,6 +4,7 @@ from api.utils.error_messages import serialization_error
 
 
 class ApplianceCategory(UserActionBase, OrgBaseModel):
+    _ORG_ID_NULLABLE = False
     name = db.Column(db.String(50), nullable=False)
     description = db.Column(db.String, nullable=False)
     __unique_constraints__ = ((('name', 'organisation_id'),

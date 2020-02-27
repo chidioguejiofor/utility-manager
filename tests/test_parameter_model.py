@@ -28,7 +28,6 @@ class TestParameterSerializer:
         assert parameter_dict['updatedAt'] is None
         assert parameter_dict['valueType'] == ValueTypeEnum.NUMERIC.name
         assert parameter_dict['createdBy']['id'] == valid_user_obj.id
-        assert parameter_dict['required'] is True
 
     def test_load_parameter_model_from_dictionary(
             self, init_db, bulk_create_unit_objects,

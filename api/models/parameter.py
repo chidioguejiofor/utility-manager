@@ -19,7 +19,6 @@ class Parameter(UserActionBase, OrgBaseModel):
                         db.ForeignKey('Unit.id', ondelete='RESTRICT'),
                         nullable=True)
     validation = db.Column(db.String(), nullable=True)
-    required = db.Column(db.BOOLEAN, default=True, nullable=False)
     value_type = db.Column(db.Enum(ValueType, name='value_type_enum'),
                            nullable=False)
     unit = db.relationship('Unit',

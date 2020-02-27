@@ -1,12 +1,8 @@
-from .base import BaseView, BaseOrgView
+from .base import BaseOrgView
 from settings import endpoint
 from flask import request
-from api.models import Membership
-from api.services.redis_util import RedisUtil
 from api.schemas import ParameterSchema
-from api.utils.exceptions import ResponseException
 from api.utils.success_messages import CREATED
-from api.utils.error_messages import serialization_error, authentication_errors
 
 
 @endpoint('/org/<string:org_id>/parameters')

@@ -7,7 +7,8 @@ serialization_error = {
     'already_exists': 'The {} already exists',
     'invalid_field_data':
     "There are some fields data you provided that are invalid",
-    'min_length_error': 'This field must be greater than {} characters',
+    'min_length_error':
+    'This field must be greater than or equal to {} characters',
     'max_length_error': 'This field must be less than {} characters',
     'login_failed': 'Invalid login Credentials',
     'email_not_found': 'The email you specified was not found',

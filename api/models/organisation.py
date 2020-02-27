@@ -1,5 +1,5 @@
 import os
-from .base import BaseModel, IDGenerator
+from .base import BaseModel
 from api.services.redis_util import RedisUtil
 from .membership import Membership
 from settings import db
@@ -56,10 +56,6 @@ class Organisation(BaseModel):
                 ))
         Membership.bulk_create(memberships)
         return org_objs
-
-    def before_save(self, *args, **kwargs):
-        if not self.id:
-            self.id = IDGenerator.generate_id()
 
     def after_save(self):
         from api.services.file_uploader import FileUploader

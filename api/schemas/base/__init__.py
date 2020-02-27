@@ -28,3 +28,8 @@ class BaseSchema(Schema):
 class AbstractSchemaWithTimeStampsMixin:
     created_at = fields.DateTime(data_key='createdAt', dump_only=True)
     updated_at = fields.DateTime(data_key='updatedAt', dump_only=True)
+
+
+class AbstractUserActionMixin:
+    created_by_id = StringField()
+    updated_by_id = StringField()

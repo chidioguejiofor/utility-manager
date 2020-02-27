@@ -228,6 +228,7 @@ For example, assuming we have seeders for users( we don't!). It would look somet
 
 from seeders.model_seeders.base import BaseSeeder
 from api.models import User as UserModel
+from api.utils.id_generator import IDGenerator
 
 class UserSeed(BaseSeeder):
     __model__ = UserModel

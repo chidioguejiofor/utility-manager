@@ -1,17 +1,13 @@
 from settings import db
 from api.utils.exceptions import ModelOperationException
 from api.utils.error_messages import model_operations, serialization_error
-from .base import BaseModel
+from .base import OrgBaseModel
 
 
-class Unit(BaseModel):
+class Unit(OrgBaseModel):
     name = db.Column(db.String(), nullable=False)
     letter_symbol = db.Column(db.String(5), nullable=True)
     greek_symbol_num = db.Column(db.SmallInteger(), nullable=True)
-    organisation_id = db.Column(db.String(21),
-                                db.ForeignKey('Organisation.id',
-                                              ondelete='CASCADE'),
-                                nullable=True)
     __unique_constraints__ = (
         (('name', 'letter_symbol', 'organisation_id'),
          'unit_name_and_letter_symbol_unique_constraint'),

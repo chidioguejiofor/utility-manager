@@ -1,6 +1,6 @@
 import enum
 from settings import db
-from .base import BaseModel, UserActionBase
+from .base import OrgBaseModel, UserActionBase
 from api.utils.error_messages import serialization_error
 
 
@@ -12,7 +12,7 @@ class ValueType(enum.Enum):
     ENUM = 4
 
 
-class Parameter(UserActionBase, BaseModel):
+class Parameter(UserActionBase, OrgBaseModel):
 
     name = db.Column(db.String(), nullable=False)
     unit_id = db.Column(db.String(),
@@ -22,10 +22,6 @@ class Parameter(UserActionBase, BaseModel):
     required = db.Column(db.BOOLEAN, default=True, nullable=False)
     value_type = db.Column(db.Enum(ValueType, name='value_type_enum'),
                            nullable=False)
-    organisation_id = db.Column(db.String(21),
-                                db.ForeignKey('Organisation.id',
-                                              ondelete='CASCADE'),
-                                nullable=True)
     unit = db.relationship('Unit',
                            back_populates='parameters',
                            foreign_keys=[unit_id])

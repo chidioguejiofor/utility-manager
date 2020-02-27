@@ -2,12 +2,11 @@ import pytest
 from unittest.mock import Mock
 from settings import create_app
 
-from api.models import Unit
+from api.models import Unit, Membership, db, Invitation, Role
 from .mocks.organisation import OrganisationGenerator
 from .mocks.user import UserGenerator
 from seeders.seeders_manager import SeederManager
 from .mocks.redis import RedisMock
-from api.models import Role, Invitation, db, Organisation, Membership
 
 
 @pytest.yield_fixture(scope='session')
@@ -94,6 +93,17 @@ def saved_user_invitations(init_db):
         return org_objs, user, org_ids, invitations, regular_user_id
 
     return create_and_return_mock_data
+
+
+@pytest.fixture(scope='function')
+def add_user_to_organisation(init_db):
+    def _add_user_to_organisation(org, user, role='REGULAR USERS'):
+        role_obj = Role.query.filter_by(name=role).first()
+        Membership(organisation_id=org.id,
+                   user_id=user.id,
+                   role_id=role_obj.id).save()
+
+    return _add_user_to_organisation
 
 
 @pytest.fixture(scope='function')

@@ -17,7 +17,6 @@ class Parameter(AbstractSchemaWithTimeStampsMixin, BaseSchema):
     updated_by_id = StringField(load_only=True, data_key='updated_by_id')
     unit_id = StringField(load_only=True, data_key='unitId')
     validation = StringField()
-    required = fields.Boolean(default=True)
     value_type = EnumField(enum=ValueTypeEnum,
                            data_key='valueType',
                            by_value=False,

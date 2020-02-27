@@ -1,6 +1,6 @@
 from api.utils.success_messages import RETRIEVED
 from api.utils.error_messages import authentication_errors
-from api.models import Membership, Organisation, db
+from api.models import Membership, Organisation, db, User
 from tests.mocks.user import UserGenerator
 from tests.assertions import assert_paginator_data_values, add_cookie_to_client
 
@@ -15,6 +15,7 @@ INVITE_KEY = 'invites'
 def run_test_precondition():
     Membership.query.delete()
     Organisation.query.delete()
+    User.query.delete()
     db.session.commit()
 
 
@@ -195,6 +196,7 @@ class TestRetrieveUserInvitations:
 class TestRetrieveOrganisationInvitations:
     def test_should_retrieve_organisation_invitations_when_user_is_verified(
             self, init_db, client, saved_organisation_invitations):
+        run_test_precondition()
         user_objs, org, user_ids, invitations, regular_user_id = saved_organisation_invitations(
             5)
         token = UserGenerator.generate_token(org.creator)
@@ -214,6 +216,7 @@ class TestRetrieveOrganisationInvitations:
 
     def test_admin_should_be_able_to_paginate_data(
             self, init_db, client, saved_organisation_invitations):
+        run_test_precondition()
         total_invitations = 15
         page_num = 2
         page_limit = 5
@@ -242,6 +245,7 @@ class TestRetrieveOrganisationInvitations:
 
     def test_should_fail_when_the_user_is_not_an_admin_in_the_organisation(
             self, init_db, client, saved_organisation_invitations):
+        run_test_precondition()
         total_invitations = 5
         page_num = 2
         page_limit = 5

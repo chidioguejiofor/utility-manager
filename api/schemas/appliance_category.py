@@ -11,3 +11,4 @@ class ApplianceCategory(BaseSchema, AbstractSchemaWithTimeStampsMixin,
                        required=True,
                        capitalize=True)
     description = StringField(required=True)
+    organisation_id = StringField(required=True)

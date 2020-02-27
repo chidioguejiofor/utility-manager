@@ -7,3 +7,5 @@ from .parameter import Parameter, ValueType as ValueTypeEnum
 from .role import Role
 from .invitation import Invitation
 from .appliance_category import ApplianceCategory
+from .appliance_parameter import ApplianceParameter
+from .appliance import Appliance

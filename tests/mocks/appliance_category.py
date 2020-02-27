@@ -14,5 +14,8 @@ class ApplianceCategoryGenerator(BaseGenerator):
         }
 
     @classmethod
-    def generate_model_obj_dict(cls):
-        return cls.generate_api_input_data()
+    def generate_model_obj_dict(cls, org_id):
+        return {
+            **cls.generate_api_input_data(),
+            'organisation_id': org_id,
+        }

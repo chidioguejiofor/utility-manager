@@ -11,7 +11,8 @@ import dateutil.parser
 
 class Parameter(AbstractSchemaWithTimeStampsMixin, BaseSchema):
     __model__ = ParameterModel
-
+    _excluded_user_fields = ['created_at', 'updated_at', 'verified']
+    _excluded_unit_fields = ['created_at', 'updated_at', 'organisation_id']
     name = AlphanumericField(allow_spaces=True, required=True, capitalize=True)
     created_by_id = StringField(load_only=True, data_key='createdById')
     updated_by_id = StringField(load_only=True, data_key='updated_by_id')
@@ -22,9 +23,15 @@ class Parameter(AbstractSchemaWithTimeStampsMixin, BaseSchema):
                            by_value=False,
                            required=True)
     organisation_id = StringField(data_key='organisationId', required=True)
-    created_by = fields.Nested(User, dump_only=True, data_key='createdBy')
-    updated_by = fields.Nested(User, dump_only=True, data_key='updatedBy')
-    unit = fields.Nested(Unit, dump_only=True)
+    editable = fields.Function(lambda obj: bool(obj.organisation_id),
+                               dump_only=True)
+    created_by = fields.Nested(User(exclude=_excluded_user_fields),
+                               dump_only=True,
+                               data_key='createdBy')
+    updated_by = fields.Nested(User(exclude=_excluded_user_fields),
+                               dump_only=True,
+                               data_key='updatedBy')
+    unit = fields.Nested(Unit(exclude=_excluded_unit_fields), dump_only=True)
 
     def validation_enum_value_type(self, validation):
         self._error_msg_generator(not validation,

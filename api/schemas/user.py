@@ -1,5 +1,6 @@
 from .base import (AbstractSchemaWithTimeStampsMixin, ImageField, StringField,
-                   AlphaOnlyField, BaseSchema, AlphanumericField, PasswordField)
+                   AlphaOnlyField, BaseSchema, AlphanumericField,
+                   PasswordField)
 from ..models import User as UserModel
 from marshmallow import fields
 
@@ -25,9 +26,15 @@ class LoginSchema(BaseSchema):
                                     required=True,
                                     data_key='usernameOrEmail')
 
+
 class ChangePasswordSchema(BaseSchema):
-    current_password =  PasswordField(load_only=True, required=True, data_key='currentPassword')
-    new_password =  PasswordField(load_only=True, required=True, data_key='newPassword')
+    current_password = PasswordField(load_only=True,
+                                     required=True,
+                                     data_key='currentPassword')
+    new_password = PasswordField(load_only=True,
+                                 required=True,
+                                 data_key='newPassword')
+
 
 class ProfileSchema(BaseSchema):
     username = AlphanumericField(data_key="username",

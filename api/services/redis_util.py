@@ -1,11 +1,10 @@
 import os
 import redis
 from api.utils.id_generator import IDGenerator
-from api.models.role import Role
-from tests.mocks.redis import RedisMock
 
 
 class RedisUtil:
+    from tests.mocks import RedisMock
     REDIS = RedisMock
     if os.getenv('FLASK_ENV') != 'testing':
         REDIS = redis.from_url(os.getenv('REDIS_SERVER_URL'))

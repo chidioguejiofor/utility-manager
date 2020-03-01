@@ -1,4 +1,4 @@
-from . import fake, BaseGenerator
+from .base import fake, BaseGenerator
 from api.models import Parameter, ValueTypeEnum
 
 
@@ -12,7 +12,8 @@ class ParameterGenerator(BaseGenerator):
     @classmethod
     def generate_model_obj_dict(cls, **kwargs):
         return {
-            'name': fake.first_name()[:30].strip(),
+            'name':
+            fake.first_name()[:15].strip() + fake.first_name()[:15].strip(),
             'unit_id': kwargs.get('unit_id'),
             'validation': kwargs.get('validation'),
             'value_type': kwargs.get('value_type', ValueTypeEnum.NUMERIC),

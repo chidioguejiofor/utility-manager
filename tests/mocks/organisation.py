@@ -1,4 +1,4 @@
-from . import fake, BaseGenerator
+from .base import fake, BaseGenerator
 from api.models import Organisation
 from .user import UserGenerator
 

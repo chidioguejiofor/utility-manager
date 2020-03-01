@@ -12,7 +12,7 @@ class ParameterView(BaseOrgView, BasePaginatedView):
     __SCHEMA__ = ParameterSchema
     RETRIEVE_SUCCESS_MSG = RETRIEVED.format('Parameter')
     ALLOWED_ROLES = {'POST': ['MANAGER', 'OWNER']}
-    protected_methods = ['POST', 'GET']
+    PROTECTED_METHODS = ['POST', 'GET']
     SEARCH_FILTER_ARGS = {
         'name': {
             'filter_type': 'ilike'

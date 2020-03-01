@@ -48,7 +48,7 @@ class Authentication:
         view = self.view
         method = request.method.upper()
 
-        if method in view.protected_methods:
+        if method in view.PROTECTED_METHODS:
             verified_user_only = not (method in view.unverified_methods)
             return self._decode_token(
                 check_user_is_verified=verified_user_only)

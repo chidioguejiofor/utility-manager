@@ -8,7 +8,7 @@ from api.utils.success_messages import CREATED, RETRIEVED
 
 @endpoint('/org/create')
 class CreateOrg(BaseView):
-    protected_methods = ['POST']
+    PROTECTED_METHODS = ['POST']
 
     def post(self, user_data):
         logo = request.files.get('logo')
@@ -25,7 +25,7 @@ class CreateOrg(BaseView):
 @endpoint('/user/orgs')
 class RetrieveUserMemberships(BaseView, BasePaginatedView):
     __model__ = Membership
-    protected_methods = ['GET']
+    PROTECTED_METHODS = ['GET']
     unverified_methods = ['GET']
 
     SORT_KWARGS = {

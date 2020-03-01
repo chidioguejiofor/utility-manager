@@ -32,7 +32,7 @@ class UnitView(BaseOrgView, BasePaginatedView):
         'defaults': 'name,letter_symbol',
         'sort_fields': {'name', 'letter_symbol'}
     }
-    protected_methods = ['GET', 'POST']
+    PROTECTED_METHODS = ['GET', 'POST']
 
     ALLOWED_ROLES = {'POST': ['OWNER', 'ENGINEER', 'ADMIN']}
 

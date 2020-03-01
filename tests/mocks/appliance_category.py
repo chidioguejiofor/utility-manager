@@ -1,6 +1,5 @@
-from . import fake, BaseGenerator
+from .base import fake, BaseGenerator
 from api.models import ApplianceCategory
-from .user import UserGenerator
 
 
 class ApplianceCategoryGenerator(BaseGenerator):
@@ -14,8 +13,8 @@ class ApplianceCategoryGenerator(BaseGenerator):
         }
 
     @classmethod
-    def generate_model_obj_dict(cls, org_id):
+    def generate_model_obj_dict(cls, org_id, **kwargs):
         return {
-            **cls.generate_api_input_data(),
-            'organisation_id': org_id,
+            **cls.generate_api_input_data(), 'organisation_id': org_id,
+            **kwargs
         }

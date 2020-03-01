@@ -10,7 +10,7 @@ from api.utils.success_messages import CREATED
 
 @org_endpoint('/appliance-category/<string:category_id>/appliance')
 class ApplianceCategoryView(BaseOrgView):
-    protected_methods = ['POST']
+    PROTECTED_METHODS = ['POST']
 
     ALLOWED_ROLES = {'POST': ['MANAGER', 'OWNER', 'ADMIN']}
 

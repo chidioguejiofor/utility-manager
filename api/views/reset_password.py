@@ -66,7 +66,7 @@ class ConfirmResetPassword(BaseView, CookieGeneratorMixin):
 
 @endpoint('/auth/password')
 class LoggedInUserChangePassword(BaseView, CookieGeneratorMixin):
-    protected_methods = ['PATCH']
+    PROTECTED_METHODS = ['PATCH']
     unverified_methods = ['PATCH']
 
     def patch(self, user_data, **kwargs):

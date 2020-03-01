@@ -1,6 +1,5 @@
 import os
 from .base import BaseModel
-from api.services.redis_util import RedisUtil
 from .membership import Membership
 from settings import db
 import enum
@@ -45,6 +44,7 @@ class Organisation(BaseModel):
         Returns:
             list: a list of organisation models
         """
+        from api.services.redis_util import RedisUtil
         org_objs = super().bulk_create(iterable)
         memberships = []
         for org_obj in org_objs:
@@ -59,7 +59,7 @@ class Organisation(BaseModel):
 
     def after_save(self):
         from api.services.file_uploader import FileUploader
-
+        from api.services.redis_util import RedisUtil
         Membership(organisation_id=self.id,
                    user_id=self.creator_id,
                    role_id=RedisUtil.get_role_id('OWNER')).save(commit=True)

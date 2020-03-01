@@ -8,7 +8,7 @@ from api.utils.success_messages import RETRIEVED
 @endpoint('/org/<string:org_id>/roles')
 class OrgRoleView(BaseOrgView, BasePaginatedView):
     __model__ = Role
-    protected_methods = ['GET']
+    PROTECTED_METHODS = ['GET']
     SEARCH_FILTER_ARGS = {
         'name': {
             'filter_type': 'ilike'

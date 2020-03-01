@@ -1,19 +1,7 @@
-from faker import Faker
-import json
-fake = Faker()
+from .user import UserGenerator
 
-
-class BaseGenerator:
-    __model__ = None
-
-    @classmethod
-    def generate_model_obj(cls, *args, save=False, **kwargs):
-        model_instance = cls.__model__(
-            **cls.generate_model_obj_dict(*args, **kwargs))
-        if save:
-            model_instance.save()
-        return model_instance
-
-    @classmethod
-    def generate_api_input_json_data(cls):
-        return json.dumps(cls.generate_api_input_data())
+from .appliance_category import ApplianceCategoryGenerator
+from .redis import RedisMock
+from .organisation import OrganisationGenerator
+from .base import fake
+from .paramter import ParameterGenerator

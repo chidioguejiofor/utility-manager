@@ -2,9 +2,10 @@ import pytest
 from unittest.mock import Mock
 from settings import create_app
 
-from api.models import Unit, Membership, db, Invitation, Role
+from api.models import Unit, Membership, db, Invitation, Role, Parameter
 from .mocks.organisation import OrganisationGenerator
 from .mocks.user import UserGenerator
+from .mocks.paramter import ParameterGenerator
 from seeders.seeders_manager import SeederManager
 from .mocks.redis import RedisMock
 
@@ -91,6 +92,25 @@ def saved_user_invitations(init_db):
 
         Invitation.bulk_create(invitations)
         return org_objs, user, org_ids, invitations, regular_user_id
+
+    return create_and_return_mock_data
+
+
+@pytest.fixture(scope='function')
+def saved_parameters_to_org(init_db):
+    def create_and_return_mock_data(num_of_params=3, org=None, unit_id=None):
+        if not org:
+            org = OrganisationGenerator.generate_model_obj(save=True)
+        params_objs = [
+            ParameterGenerator.generate_model_obj(organisation_id=org.id,
+                                                  save=False,
+                                                  unit_id=unit_id)
+            for _ in range(0, num_of_params)
+        ]
+
+        params_objs = Parameter.bulk_create(params_objs)
+
+        return params_objs, org
 
     return create_and_return_mock_data
 

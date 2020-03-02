@@ -20,7 +20,7 @@ class classproperty(object):
 
 
 class BaseView(Resource):
-    protected_methods = []
+    PROTECTED_METHODS = []
     unverified_methods = []
 
     @classproperty

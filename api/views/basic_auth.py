@@ -27,7 +27,7 @@ class Register(BaseView, CookieGeneratorMixin):
 
 @endpoint('/auth/resend-email')
 class ResendEmail(BaseView):
-    protected_methods = ['POST']
+    PROTECTED_METHODS = ['POST']
     unverified_methods = ['POST']
 
     def post(self, user_data):

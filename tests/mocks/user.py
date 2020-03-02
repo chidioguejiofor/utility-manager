@@ -1,4 +1,4 @@
-from . import fake, BaseGenerator
+from .base import fake, BaseGenerator
 from api.models import User
 from api.utils.token_validator import TokenValidator
 from api.utils.constants import LOGIN_TOKEN

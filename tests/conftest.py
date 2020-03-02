@@ -2,12 +2,10 @@ import pytest
 from unittest.mock import Mock
 from settings import create_app
 
-from api.models import Unit, Membership, db, Invitation, Role, Parameter
-from .mocks.organisation import OrganisationGenerator
-from .mocks.user import UserGenerator
-from .mocks.paramter import ParameterGenerator
+from api.models import Unit, Membership, db, Invitation, Role, Parameter, ApplianceCategory
+from .mocks import (ApplianceCategoryGenerator, OrganisationGenerator,
+                    UserGenerator, ParameterGenerator)
 from seeders.seeders_manager import SeederManager
-from .mocks.redis import RedisMock
 
 
 @pytest.yield_fixture(scope='session')
@@ -45,6 +43,7 @@ def unit_objs(app):
 
 @pytest.yield_fixture(scope='module')
 def init_db(app):
+    from .mocks.redis import RedisMock
     db.create_all()
     SeederManager.run()
     RedisMock.flush_all()
@@ -56,6 +55,23 @@ def init_db(app):
 @pytest.fixture(scope='module')
 def bulk_create_unit_objects(init_db, unit_objs):
     return Unit.bulk_create(unit_objs)
+
+
+@pytest.fixture(scope='session')
+def save_appliance_category_to_org():
+    def _inner_func(num_of_obs=3, org=None):
+        if not org:
+            org = OrganisationGenerator.generate_model_obj(save=True)
+        model_onjs = [
+            ApplianceCategoryGenerator.generate_model_obj(org.id, save=False)
+            for _ in range(0, num_of_obs)
+        ]
+
+        model_objs = ApplianceCategory.bulk_create(model_onjs)
+
+        return model_objs, org
+
+    return _inner_func
 
 
 @pytest.fixture(scope='function')

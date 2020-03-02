@@ -15,7 +15,7 @@ from api.services.redis_util import RedisUtil
 class OrgInvitations(BaseOrgView, BasePaginatedView):
     __model__ = Invitation
     # auth_settings
-    protected_methods = ['POST', 'GET']
+    PROTECTED_METHODS = ['POST', 'GET']
 
     # query settings
     SEARCH_FILTER_ARGS = {
@@ -156,7 +156,7 @@ class OrgInvitations(BaseOrgView, BasePaginatedView):
 
 @org_endpoint('/invitations/<string:invitation_id>/resend')
 class ResendInvitation(BaseOrgView):
-    protected_methods = ['POST']
+    PROTECTED_METHODS = ['POST']
     # org view settings
     ALLOWED_ROLES = {
         'POST': ['OWNER', 'ADMIN'],
@@ -189,7 +189,7 @@ class ResendInvitation(BaseOrgView):
 @endpoint('/user/invitations')
 class UserInvitationsView(BaseView, BasePaginatedView):
     __model__ = Invitation
-    protected_methods = ['GET']
+    PROTECTED_METHODS = ['GET']
     SEARCH_FILTER_ARGS = {
         'role_id': {
             'filter_type': 'eq'
@@ -214,7 +214,7 @@ class UserInvitationsView(BaseView, BasePaginatedView):
 
 @endpoint('/user/invitations/<string:invitation_id>/accept')
 class AcceptInvitation(BaseView):
-    protected_methods = ['POST']
+    PROTECTED_METHODS = ['POST']
 
     def post(self, user_data, invitation_id):
 

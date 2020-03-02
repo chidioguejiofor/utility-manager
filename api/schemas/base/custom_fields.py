@@ -1,4 +1,5 @@
 import re
+from api.utils.helper_functions import capitalize_each_word_in_sentence
 from marshmallow import fields, ValidationError
 from api.utils.error_messages import serialization_error
 from werkzeug.datastructures import FileStorage
@@ -61,11 +62,15 @@ b
         des_value = super()._deserialize(value, attr, data, **kwargs)
 
         des_value = re.sub("\\s{2,}", " ", des_value.strip())
-        return des_value.capitalize() if self.capitalize else des_value
+        if self.capitalize:
+            des_value = capitalize_each_word_in_sentence(des_value)
+        return des_value
+
 
 class PasswordField(StringField):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, min_length=7, **kwargs)
+
 
 class IDField(StringField):
     def __init__(self, *args, **kwargs):

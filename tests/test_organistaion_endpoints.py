@@ -57,7 +57,7 @@ class TestCreateOrganisation:
         response_body = json.loads(response.data)
         assert response.status_code == 409
         assert response_body['message'] == serialization_error[
-            'already_exists'].format('`website`')
+            'already_exists'].format('Website')
 
     def test_should_fail_with_appropriate_message_when_some_data_is_missing(
             self, mock_destroy, mock_upload, init_db, client):

@@ -12,8 +12,13 @@ class ApplianceParameter(OrgBaseModel, UserActionBase):
         db.ForeignKey('Parameter.id'),
         nullable=False,
     )
-    appliance = db.relationship("Appliance")
-    parameter = db.relationship("Parameter")
+    appliance = db.relationship("Appliance",
+                                back_populates='appliance_parameter',
+                                lazy=True)
+
+    parameter = db.relationship("Parameter",
+                                back_populates='appliance_parameter',
+                                lazy=True)
 
     __unique_constraints__ = ((('appliance_id', 'parameter_id',
                                 'organisation_id'),

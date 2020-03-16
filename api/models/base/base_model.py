@@ -5,6 +5,7 @@ from api.utils.exceptions import UniqueConstraintException
 from sqlalchemy.ext.declarative import declared_attr, AbstractConcreteBase
 from sqlalchemy import exc, orm
 import numpy as np
+from psycopg2 import errors
 from api.utils.id_generator import IDGenerator
 
 
@@ -24,6 +25,10 @@ class BaseModel(db.Model):
 
     @declared_attr
     def __table_args__(cls):
+        return cls.generate_table_args()
+
+    @classmethod
+    def generate_table_args(cls):
         final_list = []
         for column, constraint_name in cls.__unique_constraints__:
             if isinstance(column, tuple):
@@ -57,48 +62,28 @@ class BaseModel(db.Model):
             sqlalchemy.exc.SQLAlchemyError: when any database error occurs
         """
         self.before_save()
-        self._valid_unique_constraints(self)
         self.id = IDGenerator.generate_id()
 
         db.session.add(self)
         if commit:
             try:
                 db.session.commit()
-            except Exception as e:
+            except exc.IntegrityError as e:
                 db.session.rollback()
-                raise e
+                if isinstance(e.orig, errors.UniqueViolation):
+                    import api.models
+                    model_name = e.statement.split('"')[1]
+                    model = getattr(api.models, model_name)
+                    raise UniqueConstraintException(
+                        message=model.__unique_violation_msg__)
+                else:
+                    raise e
 
         self.after_save()
 
     @classmethod
     def _compare_column(cls, obj, constraint_col):
         return getattr(cls, constraint_col) == getattr(obj, constraint_col)
-
-    @classmethod
-    def _valid_unique_constraints(cls, obj):
-        error_message = cls.__unique_violation_msg__
-        filter_query = None
-        cols = []
-        for constraint_col, _ in cls.__unique_constraints__:
-            if isinstance(constraint_col, tuple):
-                test = np.bitwise_and.reduce(
-                    [cls._compare_column(obj, col) for col in constraint_col])
-                col_msg = f"`{' and '.join(constraint_col)}`"
-            else:
-                test = cls._compare_column(obj, constraint_col)
-                col_msg = f"`{constraint_col}`"
-            if filter_query is None:
-                filter_query = test
-            else:
-                filter_query = filter_query | test
-            cols.append(col_msg)
-
-        if cls.query.filter(filter_query).count() >= 1:
-            cols = ' or '.join(cols)
-            error_message = (
-                error_message if error_message else
-                serialization_error['already_exists'].format(cols))
-            raise UniqueConstraintException(error_message)
 
     def before_update(self, *args, **kwargs):
         pass

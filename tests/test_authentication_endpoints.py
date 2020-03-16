@@ -65,7 +65,6 @@ class TestChangePasswordEndpoint:
                                 data=json.dumps(user_data),
                                 content_type="application/json")
         response_body = json.loads(response.data)
-        print(response_body)
         assert response.status_code == 200
         assert response_body['status'] == 'success'
         assert response_body['message'] == PASSWORD_CHANGED
@@ -755,6 +754,6 @@ class TestRegisterEndpoint:
         assert 'data' not in response_body
         assert response_body['status'] == 'error'
         assert response_body['message'] == serialization_error[
-            'already_exists'].format('`email` or `username`')
+            'already_exists'].format('Username or email')
         assert mock_send.called is False
         assert len(RedisMock.expired_cache) == len(RedisMock.cache) == 1

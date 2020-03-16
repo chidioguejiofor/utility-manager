@@ -54,6 +54,8 @@ def init_db(app):
 
 @pytest.fixture(scope='module')
 def bulk_create_unit_objects(init_db, unit_objs):
+    Unit.query.delete()
+    db.session.commit()
     return Unit.bulk_create(unit_objs)
 
 

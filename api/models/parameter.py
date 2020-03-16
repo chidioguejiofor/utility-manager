@@ -24,7 +24,9 @@ class Parameter(UserActionBase, OrgBaseModel):
     unit = db.relationship('Unit',
                            back_populates='parameters',
                            foreign_keys=[unit_id])
-
+    appliance_parameter = db.relationship("ApplianceParameter",
+                                          back_populates='parameter',
+                                          lazy=True)
     __back_populates__kwargs__ = {
         'updated_by': 'updated_parameters',
         'created_by': 'created_parameters',

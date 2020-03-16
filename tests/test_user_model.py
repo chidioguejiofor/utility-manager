@@ -105,7 +105,8 @@ class TestUserModel:
         user_two = User(**model_dict)
         with pytest.raises(UniqueConstraintException) as e:
             user_two.save()
-        assert e.value.message == 'The `email` or `username` already exists'
+        assert e.value.message == serialization_error['already_exists'].format(
+            'Username or email')
 
     def test_user_should_be_able_to_join_an_organisation(
             self,

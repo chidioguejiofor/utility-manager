@@ -31,5 +31,5 @@ class AbstractSchemaWithTimeStampsMixin:
 
 
 class AbstractUserActionMixin:
-    created_by_id = StringField()
-    updated_by_id = StringField()
+    created_by_id = StringField(load_only=True)
+    updated_by_id = StringField(load_only=True)

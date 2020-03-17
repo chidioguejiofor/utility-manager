@@ -1,12 +1,10 @@
 from .base import BaseView, BasePaginatedView, BaseOrgView
 from settings import endpoint
 from flask import request
-from api.models import Unit, Membership
+from api.models import Unit
 from api.schemas import UnitSchema
 from api.utils.exceptions import ResponseException
 from api.utils.success_messages import CREATED, RETRIEVED
-from api.services.redis_util import RedisUtil
-from api.utils.error_messages import serialization_error
 
 
 # /org/<string:org_id>/parameters

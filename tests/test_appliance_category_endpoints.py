@@ -2,7 +2,7 @@ from tests.assertions import add_cookie_to_client, assert_paginator_data_values
 from api.utils.helper_functions import capitalize_each_word_in_sentence
 from api.utils.success_messages import (CREATED, RETRIEVED)
 from api.utils.error_messages import serialization_error, authentication_errors
-from api.models import ApplianceCategory, db
+from api.models import ApplianceCategory, db, Appliance, ApplianceParameter
 from tests.mocks.user import UserGenerator
 from tests.mocks.organisation import OrganisationGenerator
 from tests.mocks.appliance_category import ApplianceCategoryGenerator
@@ -10,9 +10,13 @@ from tests.mocks.appliance_category import ApplianceCategoryGenerator
 import json
 
 URL = '/api/org/{}/appliance-category'
+RETRIEVE_URL = '/api/org/{}/appliance-category/{}'
 
 
 def run_test_precondition():
+    ApplianceParameter.query.delete()
+    ApplianceParameter.query.delete()
+    Appliance.query.delete()
     ApplianceCategory.query.delete()
     db.session.commit()
 
@@ -179,3 +183,121 @@ class TestRetrieveApplianceCategory:
 
         assert len(response_body['data']) == 1
         assert response_body['data'][0]['name'] == 'My Golden Name'
+
+
+class TestRetrieveSingleApplianceCategory:
+    def test_should_retrieve_appliance_category_when_no_parameter_is_associated_with_it(
+            self, init_db, client):
+        run_test_precondition()
+        org = OrganisationGenerator.generate_model_obj(save=True)
+        token = UserGenerator.generate_token(org.creator)
+
+        category = ApplianceCategory(
+            name='Generator',
+            description='Groups all generators in the appliacation',
+            organisation_id=org.id,
+            created_by_id=org.creator.id,
+        )
+        category.save()
+        url = RETRIEVE_URL.format(org.id, category.id)
+        add_cookie_to_client(client, org.creator, token)
+        response = client.get(url)
+        response_body = json.loads(response.data)
+        assert response_body['message'] == RETRIEVED.format(
+            'Appliance Category')
+        assert response.status_code == 200
+
+        assert response_body['status'] == 'success'
+        assert response_body['data']['name'] == category.name
+        assert response_body['data']['description'] == category.description
+        assert response_body['data']['createdBy']['id'] == org.creator.id
+        assert response_body['data']['suggestedParameters'] == []
+
+    def test_should_retrieve_category_with_suggested_parameters(
+            self, init_db, client, saved_parameters_to_org):
+        run_test_precondition()
+        params_objs, org = saved_parameters_to_org(5)
+        token = UserGenerator.generate_token(org.creator)
+
+        category = ApplianceCategory(
+            name='Generator',
+            description='Groups all generators in the appliacation',
+            organisation_id=org.id,
+            created_by_id=org.creator.id,
+        )
+        category.save()
+        appliance1 = Appliance(
+            appliance_category_id=category.id,
+            specs={'rating': 500},
+            label='id101',
+            organisation_id=org.id,
+        )
+        appliance2 = Appliance(
+            appliance_category_id=category.id,
+            specs={'rating': 200},
+            label='id102a',
+            organisation_id=org.id,
+        )
+        appliance3 = Appliance(
+            appliance_category_id=category.id,
+            specs={'rating': 200},
+            label='id102ab',
+            organisation_id=org.id,
+        )
+        appliance1.save()
+        appliance2.save()
+        appliance3.save()
+        appliance_params = []
+        for parameter in params_objs[:2]:
+            appliance_params.append(
+                ApplianceParameter(parameter_id=parameter.id,
+                                   appliance_id=appliance1.id,
+                                   organisation_id=org.id), )
+        for parameter in params_objs[0:4]:
+            appliance_params.append(
+                ApplianceParameter(organisation_id=org.id,
+                                   parameter_id=parameter.id,
+                                   appliance_id=appliance2.id))
+        for parameter in params_objs:
+            appliance_params.append(
+                ApplianceParameter(organisation_id=org.id,
+                                   parameter_id=parameter.id,
+                                   appliance_id=appliance3.id))
+        ApplianceParameter.bulk_create(appliance_params)
+        url = RETRIEVE_URL.format(org.id, category.id)
+        add_cookie_to_client(client, org.creator, token)
+        response = client.get(url)
+        response_body = json.loads(response.data)
+        assert response_body['message'] == RETRIEVED.format(
+            'Appliance Category')
+        assert response.status_code == 200
+
+        assert response_body['status'] == 'success'
+        assert response_body['data']['name'] == category.name
+        assert response_body['data']['description'] == category.description
+        assert response_body['data']['createdBy']['id'] == org.creator.id
+        assert len(response_body['data']['suggestedParameters']) == 5
+
+    def test_should_return_404_when_category_is_not_found(
+            self, init_db, client):
+        run_test_precondition()
+        org = OrganisationGenerator.generate_model_obj(save=True)
+        token = UserGenerator.generate_token(org.creator)
+
+        category = ApplianceCategory(
+            name='Generator',
+            description='Groups all generators in the appliacation',
+            organisation_id=org.id,
+            created_by_id=org.creator.id,
+        )
+        category.save()
+
+        url = RETRIEVE_URL.format(org.id, 'unknown-id')
+        add_cookie_to_client(client, org.creator, token)
+        response = client.get(url)
+        response_body = json.loads(response.data)
+        assert response_body['message'] == serialization_error[
+            'not_found'].format('Appliance Category')
+        assert response.status_code == 404
+
+        assert response_body['status'] == 'error'

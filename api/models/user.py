@@ -7,7 +7,8 @@ from .base import BaseModel
 
 
 class User(BaseModel):
-
+    __unique_violation_msg__ = serialization_error['already_exists'].format(
+        'Username or email')
     username = db.Column(
         db.String(20),
         nullable=False,

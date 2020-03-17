@@ -9,7 +9,12 @@ class Appliance(UserActionBase, OrgBaseModel):
     specs = db.Column(db.JSON, nullable=False)
     appliance_category_id = db.Column(db.String(21),
                                       db.ForeignKey('ApplianceCategory.id'))
-    appliance_category = db.relationship("ApplianceCategory")
+    appliance_category = db.relationship("ApplianceCategory",
+                                         back_populates='appliance',
+                                         lazy=True)
+    appliance_parameter = db.relationship("ApplianceParameter",
+                                          back_populates='appliance',
+                                          lazy=True)
     __unique_constraints__ = ((('label', 'organisation_id',
                                 'appliance_category_id'),
                                'org_appliance_constraint'), )

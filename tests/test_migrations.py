@@ -1,4 +1,3 @@
-from flask_migrate import current
 import flask_migrate
 
 

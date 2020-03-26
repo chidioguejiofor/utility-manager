@@ -5,13 +5,11 @@ from flask import Blueprint
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_cors import CORS
-import dotenv
 import inspect
 from .configs import ENV_MAPPER
 from .service_config import add_id_event_to_models, create_cli_commands
 from .error_handlers import create_error_handlers
 db = SQLAlchemy()
-dotenv.load_dotenv()
 api_blueprint = Blueprint('api_bp', __name__, url_prefix='/api')
 org_blueprint = Blueprint('org_bp',
                           __name__,

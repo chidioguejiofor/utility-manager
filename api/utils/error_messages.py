@@ -79,7 +79,9 @@ model_operations = {
     'both_greek_and_letter_are_provided': (
         'Only one of `letter_symbol` or `greek_symbol_num` should have a value not both',
         'Only one of `letterSymbol` or `greekSymbol` should have a value not both',
-    )
+    ),
+    'ids_not_found':
+    'Some ids you specified were not found'
 }
 
 invitation_errors = {

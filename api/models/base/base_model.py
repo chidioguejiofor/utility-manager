@@ -1,7 +1,7 @@
 from settings import db
 from api.utils.time_util import TimeUtil
-from api.utils.error_messages import serialization_error
-from api.utils.exceptions import UniqueConstraintException
+from api.utils.error_messages import model_operations
+from api.utils.exceptions import UniqueConstraintException, ModelOperationException
 from sqlalchemy.ext.declarative import declared_attr, AbstractConcreteBase
 from sqlalchemy import exc, orm
 import numpy as np
@@ -13,6 +13,7 @@ class BaseModel(db.Model):
     __abstract__ = True
     __unique_constraints__ = []
     __unique_violation_msg__ = None
+    __missing_fk_error_msg__ = {}
     id = db.Column(db.String(21),
                    primary_key=True,
                    default=IDGenerator.generate_id)
@@ -65,21 +66,39 @@ class BaseModel(db.Model):
         self.id = IDGenerator.generate_id()
 
         db.session.add(self)
-        if commit:
-            try:
-                db.session.commit()
-            except exc.IntegrityError as e:
-                db.session.rollback()
-                if isinstance(e.orig, errors.UniqueViolation):
-                    import api.models
-                    model_name = e.statement.split('"')[1]
-                    model = getattr(api.models, model_name)
-                    raise UniqueConstraintException(
-                        message=model.__unique_violation_msg__)
-                else:
-                    raise e
+        self._commit_or_flush(commit)
 
         self.after_save()
+
+    @classmethod
+    def _commit_or_flush(cls, commit):
+        try:
+            if commit:
+                db.session.commit()
+            else:
+                db.session.flush()
+        except exc.IntegrityError as e:
+            db.session.rollback()
+
+            if isinstance(e.orig, errors.UniqueViolation):
+                import api.models
+                model_name = e.orig.diag.table_name
+                model = getattr(api.models, model_name)
+                raise UniqueConstraintException(
+                    message=model.__unique_violation_msg__)
+            elif isinstance(e.orig, errors.ForeignKeyViolation):
+                err_string = e.orig.diag.message_detail.split('=')[0]
+                err_key = err_string.split('Key ')[1][1:-1]
+                error_msg = model_operations['ids_not_found']
+                error_msg = cls.__missing_fk_error_msg__.get(
+                    err_key, error_msg)
+                raise ModelOperationException(
+                    message=error_msg,
+                    api_message=error_msg,
+                    status_code=404,
+                )
+            else:
+                raise e
 
     @classmethod
     def _compare_column(cls, obj, constraint_col):
@@ -170,8 +189,7 @@ class BaseModel(db.Model):
             model_objs.append(data)
 
         db.session.bulk_save_objects(model_objs)
-        if kwargs.get('commit', True) is True:
-            db.session.commit()
+        cls._commit_or_flush(kwargs.get('commit', True))
         cls.after_bulk_create(model_objs, *args, **kwargs)
         return model_objs
 

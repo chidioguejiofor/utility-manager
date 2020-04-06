@@ -1,6 +1,6 @@
 from unittest.mock import Mock, patch
 from api.models import Membership, Organisation, Role, db
-from api.utils.error_messages import serialization_error
+from api.utils.error_messages import serialization_error, model_operations
 from .mocks.user import UserGenerator
 from .mocks.organisation import OrganisationGenerator
 from .mocks.redis import RedisMock
@@ -8,7 +8,6 @@ from .assertions import assert_unverified_user, assert_paginator_data_values, ad
 import math
 import json
 from api.utils.success_messages import RETRIEVED
-from api.utils.constants import COOKIE_TOKEN_KEY
 
 CREATE_ORG_URL = '/api/org/create'
 RETRIEVE_USER_ORGANISATIONS = '/api/user/orgs'
@@ -37,7 +36,7 @@ class TestCreateOrganisation:
             'message']
 
     def test_should_fail_when_the_website_already_exists(
-            self, mock_destroy, mock_upload, app, init_db, client):
+        self, mock_destroy, mock_upload, app, init_db, client):
         from api.services.file_uploader import FileUploader
         FileUploader.upload_file.delay = Mock(
             side_effect=FileUploader.upload_file)
@@ -60,7 +59,7 @@ class TestCreateOrganisation:
             'already_exists'].format('Website')
 
     def test_should_fail_with_appropriate_message_when_some_data_is_missing(
-            self, mock_destroy, mock_upload, init_db, client):
+        self, mock_destroy, mock_upload, init_db, client):
         user = UserGenerator.generate_model_obj(verified=True, save=True)
         token = UserGenerator.generate_token(user)
 
@@ -81,7 +80,7 @@ class TestCreateOrganisation:
             'message']
 
     def test_should_not_update_model_image_when_cloudinary_throws_error(
-            self, mock_destroy, mock_upload, app, init_db, client):
+        self, mock_destroy, mock_upload, app, init_db, client):
         from api.services.file_uploader import FileUploader
         FileUploader.upload_file.delay = Mock(
             side_effect=FileUploader.upload_file)
@@ -110,7 +109,7 @@ class TestCreateOrganisation:
         assert RedisMock.get('ROLE_OWNER') == owner_role
 
     def test_should_fail_when_the_user_token_has_not_been_verified(
-            self, mock_destroy, mock_upload, app, init_db, client):
+        self, mock_destroy, mock_upload, app, init_db, client):
         valid_data = OrganisationGenerator.generate_api_input_data()
         user = UserGenerator.generate_model_obj(save=True)
         token = UserGenerator.generate_token(user)
@@ -121,8 +120,33 @@ class TestCreateOrganisation:
                                data=valid_data,
                                user=user)
 
+    def test_save_org_should_fail_when_the_user_id_is_not_found(
+        self, mock_destroy, mock_upload, app, init_db, client):
+        from api.services.file_uploader import FileUploader
+        FileUploader.upload_file.delay = Mock(
+            side_effect=FileUploader.upload_file)
+        RedisMock.flush_all()
+        mock_upload.return_value = CLOUDINARY_RES
+        valid_data = OrganisationGenerator.generate_api_input_data()
+        user = UserGenerator.generate_model_obj(verified=True, save=False)
+        user.id = 'unknown_id'
+        token = UserGenerator.generate_token(user)
+        add_cookie_to_client(client, user, token)
+        with open('tests/mocks/org_image.jpg', 'rb') as file:
+            valid_data['logo'] = file
+            response = client.post(CREATE_ORG_URL,
+                                   data=valid_data,
+                                   content_type="multipart/form-data")
+        response_body = json.loads(response.data)
+        # Asserting response object
+        assert response.status_code == 404
+        assert response_body['status'] == 'error'
+        assert response_body['message'] == model_operations['ids_not_found']
+        assert not FileUploader.upload_file.delay.called
+        assert not mock_upload.called
+
     def test_organisation_should_be_created_successfully_and_image_asynchronously_updated_when_input_data_is_valid(
-            self, mock_destroy, mock_upload, app, init_db, client):
+        self, mock_destroy, mock_upload, app, init_db, client):
         from api.services.file_uploader import FileUploader
         FileUploader.upload_file.delay = Mock(
             side_effect=FileUploader.upload_file)
@@ -213,7 +237,7 @@ class TestRetrieveUserOrganisation:
         )
 
     def test_should_return_empty_array_when_no_membership_is_found(
-            self, init_db, client, saved_org_and_user_generator):
+        self, init_db, client, saved_org_and_user_generator):
         self.create_test_precondition(saved_org_and_user_generator, 5)
         user = UserGenerator.generate_model_obj(save=True)
         token = UserGenerator.generate_token(user)

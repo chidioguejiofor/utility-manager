@@ -64,7 +64,8 @@ b
         des_value = re.sub("\\s{2,}", " ", des_value.strip())
         if self.capitalize:
             des_value = capitalize_each_word_in_sentence(des_value)
-        return des_value
+        if des_value:
+            return des_value
 
 
 class PasswordField(StringField):

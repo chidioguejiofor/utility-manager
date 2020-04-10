@@ -21,7 +21,7 @@ serialization_error = {
     'not_found': '{} was not found',
     'already_added':
     'Some {}(s) you specified, have already been added this {}',
-    'exists_in_org': "This {} has already been created for your organisation",
+    'exists_in_org': "A {} with those values has already been created",
     'empty_update_data':
     "You did not specify any data you would like to update",
     'some_ids_not_found': "There are {} ids you specified that were not found"

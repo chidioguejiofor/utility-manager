@@ -10,4 +10,4 @@ docker-junk
 htmlcov
 **/*.pyc
 dumped_files/
-
+.DS_Store

@@ -6,6 +6,7 @@ from api.utils.success_messages import RETRIEVED, UPDATED
 from api.utils.error_messages import serialization_error
 from api.models import User
 from api.utils.exceptions import ResponseException
+import logging
 
 
 @endpoint('/user/profile')
@@ -39,10 +40,11 @@ class Profile(BaseView):
                 setattr(user_to_update, key, value)
 
         if update_dict:
+            logging.info('---------Running Update Here------')
             user_to_update.update()
         else:
             raise ResponseException(serialization_error['empty_update_data'])
-
+        logging.info('---------Returning update data------')
         user_data = UserSchema().dump_success_data(user_to_update,
                                                    UPDATED.format("Profile"))
         return user_data, 201

@@ -3,6 +3,7 @@ import logging
 import cloudinary.uploader
 import api.models as models
 from celery_config import celery_app
+from PIL import Image
 
 
 class FileUploader:
@@ -34,6 +35,13 @@ class FileUploader:
         """
         error = False
         try:
+            max_width = 1200
+            img = Image.open(filename)
+            if img.size[0] > max_width:
+                wpercent = (max_width / float(img.size[0]))
+                hsize = int((float(img.size[1]) * float(wpercent)))
+                img = img.resize((max_width, hsize), Image.ANTIALIAS)
+                img.save(filename)
             upload_response = cloudinary.uploader.upload(filename)
         except Exception as e:
             error = True

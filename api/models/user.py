@@ -68,7 +68,7 @@ class User(BaseModel):
     def after_update(self, *args, **kwargs):
         from api.services.file_uploader import FileUploader
         if self.image:
-            self.filename = f'dumped_files/{self.id}-user.jpg'
+            self.filename = f'dumped_files/{self.id}-user.png'
             self.image.save(dst=self.filename)
             FileUploader.upload_file.delay(self.id, 'User', self.filename,
                                            self.image_public_id)

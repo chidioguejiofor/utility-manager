@@ -69,7 +69,7 @@ class Organisation(BaseModel):
                    role_id=RedisUtil.get_role_id('OWNER')).save(commit=True)
         if self.logo:
             path_sep = os.path.sep
-            self.filename = f'dumped_files{path_sep}{self.creator_id}-organisation.jpg'
+            self.filename = f'dumped_files{path_sep}{self.creator_id}-organisation.png'
             self.logo.save(dst=self.filename)
             FileUploader.upload_file.delay(self.id, 'Organisation',
                                            self.filename)

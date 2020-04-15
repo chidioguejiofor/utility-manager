@@ -28,10 +28,11 @@ pytest-env = "*"
 gunicorn = "*"
 pyyaml = "*"
 click = "*"
-sentry-sdk = {version = "==0.14.1", extras = ["flask"]}
-raven = {extras = ["flask"], version = "*"}
+sentry-sdk = {version = "==0.14.1",extras = ["flask"]}
+raven = {extras = ["flask"],version = "*"}
 blinker = "*"
 werkzeug = "==0.16.1"
+pillow = "*"
 
 [dev-packages]
 yapf = "*"

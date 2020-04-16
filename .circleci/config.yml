@@ -1,5 +1,8 @@
 version: 2 # use CircleCI 2.0
 
+orbs:
+  codecov: codecov/codecov@1.0.2
+
 docker_setup: &docker_setup
   docker: # run the steps with Docker
     # CircleCI Python images available at: https://hub.docker.com/r/circleci/python/
@@ -20,6 +23,12 @@ docker_setup: &docker_setup
 
     # CircleCI PostgreSQL images available at: https://hub.docker.com/r/circleci/postgres/
 
+#commands:
+#  upload_test_coverage_to_cov:
+#    description: "Upload test coverage"
+#    steps:
+#      - codecov/upload:
+#          file: coverage.xml
 
 restore_cache: &run_restore_cache
   restore_cache:
@@ -43,19 +52,11 @@ run_tests: &run_tests
   command: |
     mkdir -p dumped_files && pipenv run pytest
 
-setup_codeclimate: &setup_codeclimate
-
-  name: Setup Code Climate test-reporter
-  command: |
-    curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
-    chmod +x ./cc-test-reporter
-
 generate_coverage_report: &generate_coverage_report
-  name: contains code coverage report
-  command: |
-    ./cc-test-reporter before-build
-    mkdir -p dumped_files && pipenv run pytest --cov=api --cov-report xml --cov-branch
-    ./cc-test-reporter after-build
+  name: 'Upload coverage report'
+  command:
+    codecov/upload:
+      file: coverage.xml
 
 
 jobs: # A basic unit of work in a run
@@ -87,8 +88,10 @@ jobs: # A basic unit of work in a run
       - run: *install_dependencies
       - run: *run_tests
       - save_cache: *save_cache
-      - run: *setup_codeclimate
-      - run: *generate_coverage_report
+      - run:
+          name: Upload Coverage
+          command: |
+            bash <(curl -s https://codecov.io/bash)
 
   deploy:
     <<: *docker_setup
@@ -118,7 +121,7 @@ jobs: # A basic unit of work in a run
 
 workflows:
   version: 2
-  run_test_and_deploy_app:
+  run_test_and_send_coverage:
       jobs:
         - run_test_and_upload_coverage
         - deploy:

@@ -7,4 +7,4 @@ from .profile import Profile
 from .invitation import OrgInvitations
 from .roles import OrgRoleView
 from .appliaance_category import ApplianceCategoryView
-from .appliance import Appliance
+from .appliance import ApplianceView

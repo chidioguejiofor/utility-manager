@@ -1,6 +1,6 @@
 from api.utils.exceptions import ResponseException
 from api.utils.error_messages import serialization_error
-from .base import BaseOrgView
+from .base import BaseOrgView, BasePaginatedView
 from settings import org_endpoint
 from flask import request
 from api.models import Appliance, Parameter, ApplianceParameter, ApplianceCategory
@@ -8,11 +8,26 @@ from api.schemas import ApplianceSchema
 from api.utils.success_messages import CREATED
 
 
-@org_endpoint('/appliance-category/<string:category_id>/appliance')
-class ApplianceCategoryView(BaseOrgView):
-    PROTECTED_METHODS = ['POST']
+@org_endpoint('/appliance-category/<string:category_id>/appliances')
+class ApplianceView(BaseOrgView, BasePaginatedView):
+    __model__ = Appliance
+    __SCHEMA__ = ApplianceSchema
+    PROTECTED_METHODS = ['POST', 'GET']
 
     ALLOWED_ROLES = {'POST': ['MANAGER', 'OWNER', 'ADMIN']}
+
+    # query settings
+    SEARCH_FILTER_ARGS = {
+        'label': {
+            'filter_type': 'ilike'
+        },
+    }
+
+    SORT_KWARGS = {'defaults': 'created_at', 'sort_fields': {'created_at'}}
+
+    def filter_get_method_query(self, query, *args, org_id, **kwargs):
+        return query.filter(
+            self.__model__.appliance_category_id == kwargs['category_id'])
 
     def post(self, org_id, category_id, user_data, membership):
         json_data = request.get_json()

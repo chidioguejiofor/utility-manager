@@ -9,7 +9,7 @@ from tests.mocks.paramter import ParameterGenerator
 
 import json
 
-CREATE_URL = '/api/org/{}/appliance-category/{}/appliance'
+CREATE_URL = '/api/org/{}/appliance-category/{}/appliances'
 
 
 class TestCreateApplianceEndpoints:
@@ -41,7 +41,7 @@ class TestCreateApplianceEndpoints:
         }
 
     def test_appliance_should_be_created_when_user_is_an_admin_in_the_organisation(
-            self, init_db, client):
+        self, init_db, client):
         org, category_model, parameter = self.run_test_precondition(client)
         json_data = self.generate_json(parameter.id)
         response = client.post(CREATE_URL.format(org.id, category_model.id),
@@ -62,7 +62,7 @@ class TestCreateApplianceEndpoints:
             parameter_id=parameter.id, appliance_id=model.id).count() == 1
 
     def test_should_fail_when_the_appliance_already_exists(
-            self, client, init_db):
+        self, client, init_db):
         org, category_model, parameter = self.run_test_precondition(client)
         json_data = self.generate_json(parameter.id)
         response = client.post(CREATE_URL.format(org.id, category_model.id),
@@ -91,7 +91,7 @@ class TestCreateApplianceEndpoints:
         assert len(response_body['errors']['parameters']) > 0
 
     def test_should_return_404_when_user_is_not_part_of_org(
-            self, init_db, client):
+        self, init_db, client):
         user = UserGenerator.generate_model_obj(save=True, verified=True)
         org, category_model, parameter = self.run_test_precondition(client,
                                                                     user=user)
@@ -107,7 +107,7 @@ class TestCreateApplianceEndpoints:
         assert response_body['status'] == 'error'
 
     def test_should_fail_when_there_are_invalid_parameters_in_the_request(
-            self, init_db, client):
+        self, init_db, client):
         org, category_model, parameter = self.run_test_precondition(client)
         json_data = self.generate_json(parameter.id)
         json_data['parameters'].append('id1')
@@ -123,7 +123,7 @@ class TestCreateApplianceEndpoints:
         assert response.status_code == 400
 
     def test_should_return_404_when_appliance_category_is_not_found(
-            self, init_db, client):
+        self, init_db, client):
         org, category_model, parameter = self.run_test_precondition(client)
         json_data = self.generate_json(parameter.id)
         response = client.post(CREATE_URL.format(org.id, 'abas'),
@@ -137,7 +137,7 @@ class TestCreateApplianceEndpoints:
         assert response_body['status'] == 'error'
 
     def test_should_fail_when_the_user_is_not_an_admin(
-            self, init_db, client, add_user_to_organisation):
+        self, init_db, client, add_user_to_organisation):
         user = UserGenerator.generate_model_obj(save=True, verified=True)
         org, category_model, parameter = self.run_test_precondition(client,
                                                                     user=user)
@@ -153,7 +153,7 @@ class TestCreateApplianceEndpoints:
         assert response_body['status'] == 'error'
 
     def test_should_fail_when_the_user_is_not_verified(
-            self, init_db, client, add_user_to_organisation):
+        self, init_db, client, add_user_to_organisation):
         user = UserGenerator.generate_model_obj(save=True, verified=False)
         org, category_model, parameter = self.run_test_precondition(client,
                                                                     user=user)

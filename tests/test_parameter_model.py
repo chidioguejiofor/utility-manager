@@ -13,7 +13,7 @@ class TestParameterSerializer:
         valid_user_obj = UserGenerator.generate_model_obj(save=True)
         org = OrganisationGenerator.generate_model_obj(valid_user_obj.id,
                                                        save=True)
-        voltage_unit = Unit.query.filter_by(letter_symbol='V').first()
+        voltage_unit = Unit.query.filter_by(symbol='V').first()
         parameter = Parameter(
             name='V1',
             unit_id=voltage_unit.id,
@@ -30,10 +30,9 @@ class TestParameterSerializer:
         assert parameter_dict['createdBy']['id'] == valid_user_obj.id
 
     def test_load_parameter_model_from_dictionary(
-            self, init_db, bulk_create_unit_objects,
-            saved_org_and_user_generator):
+        self, init_db, bulk_create_unit_objects, saved_org_and_user_generator):
         user, org = saved_org_and_user_generator
-        voltage_unit = Unit.query.filter_by(letter_symbol='V').first()
+        voltage_unit = Unit.query.filter_by(symbol='V').first()
         api_dict = dict(
             name='V1',
             unitId=voltage_unit.id,
@@ -50,8 +49,8 @@ class TestParameterSerializer:
 
 class TestParameterModel:
     def test_save_valid_parameter_with_no_organisation_nor_user_successfully(
-            self, init_db, bulk_create_unit_objects):
-        voltage_unit = Unit.query.filter_by(letter_symbol='V').first()
+        self, init_db, bulk_create_unit_objects):
+        voltage_unit = Unit.query.filter_by(symbol='V').first()
         parameter = Parameter(
             name='V1',
             unit_id=voltage_unit.id,
@@ -65,9 +64,8 @@ class TestParameterModel:
         assert parameter.created_by_id is None
 
     def test_saving_parameter_should_store_created_by_details(
-            self, init_db, bulk_create_unit_objects,
-            saved_org_and_user_generator):
-        voltage_unit = Unit.query.filter_by(letter_symbol='V').first()
+        self, init_db, bulk_create_unit_objects, saved_org_and_user_generator):
+        voltage_unit = Unit.query.filter_by(symbol='V').first()
         user, _ = saved_org_and_user_generator
         parameter = Parameter(name='V3',
                               unit_id=voltage_unit.id,
@@ -82,7 +80,7 @@ class TestParameterModel:
 
     def test_save_org_id_in_parameter(self, init_db, bulk_create_unit_objects,
                                       saved_org_and_user_generator):
-        voltage_unit = Unit.query.filter_by(letter_symbol='V').first()
+        voltage_unit = Unit.query.filter_by(symbol='V').first()
         user, org = saved_org_and_user_generator
         parameter = Parameter(
             name='V1',
@@ -100,9 +98,8 @@ class TestParameterModel:
         assert parameter.organisation_id == org.id
 
     def test_save_parameter_info_twice_should_fail(
-            self, init_db, bulk_create_unit_objects,
-            saved_org_and_user_generator):
-        voltage_unit = Unit.query.filter_by(letter_symbol='V').first()
+        self, init_db, bulk_create_unit_objects, saved_org_and_user_generator):
+        voltage_unit = Unit.query.filter_by(symbol='V').first()
         user, org = saved_org_and_user_generator
         parameter_one = Parameter(
             name='V1',

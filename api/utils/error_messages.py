@@ -81,7 +81,9 @@ model_operations = {
         'Only one of `letterSymbol` or `greekSymbol` should have a value not both',
     ),
     'ids_not_found':
-    'Some ids you specified were not found'
+    'Some ids you specified were not found',
+    'column_must_have_a_value':
+    'The "{}" column cannot be empty'
 }
 
 invitation_errors = {

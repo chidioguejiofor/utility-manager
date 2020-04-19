@@ -16,7 +16,7 @@ class SeederManager:
             list_of_dicts)
         if input_has_new_value:
             with open(f'seeders/fixtures/{key}.yaml', 'w') as file:
-                yaml.dump(data_to_write, file)
+                yaml.dump(data_to_write, file, allow_unicode=True)
 
     @classmethod
     def seed_database(cls, key):

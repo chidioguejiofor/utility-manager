@@ -25,19 +25,19 @@ def client(app):
 @pytest.fixture(scope='session')
 def unit_objs(app):
     return [
-        dict(letter_symbol='A', name='Ampere'),
-        dict(letter_symbol='J', name='Joules'),
-        dict(letter_symbol='Hz', name='Hertz'),
-        dict(letter_symbol='N', name='Newton'),
-        dict(letter_symbol='atm', name='Atmosphere'),
-        dict(letter_symbol='m', name='Meters'),
-        dict(letter_symbol='Cal', name='Calories'),
-        dict(letter_symbol='V', name='Voltage'),
-        dict(greek_symbol_num=48, name='Ohm'),
-        dict(letter_symbol='yd', name='Yards'),
-        dict(letter_symbol='in', name='Inches'),
-        dict(letter_symbol='ft', name='Feet'),
-        dict(letter_symbol='db', name='Decibels'),
+        dict(symbol='A', name='Ampere'),
+        dict(symbol='J', name='Joules'),
+        dict(symbol='Hz', name='Hertz'),
+        dict(symbol='N', name='Newton'),
+        dict(symbol='atm', name='Atmosphere'),
+        dict(symbol='m', name='Meters'),
+        dict(symbol='Cal', name='Calories'),
+        dict(symbol='V', name='Voltage'),
+        dict(symbol='\u2126', name='Ohm'),
+        dict(symbol='yd', name='Yards'),
+        dict(symbol='in', name='Inches'),
+        dict(symbol='ft', name='Feet'),
+        dict(symbol='db', name='Decibels'),
     ]
 
 

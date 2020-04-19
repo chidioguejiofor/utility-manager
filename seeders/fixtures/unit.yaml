@@ -1,174 +1,150 @@
 - created_at: 2019-10-25 19:24:07.275256
-  greek_symbol_num: null
   id: -Ls3N32e3WL3iqV4SHNW
-  letter_symbol: A
   name: Ampere
+  symbol: A
   updated_at: null
 - created_at: 2019-10-25 19:24:07.275443
-  greek_symbol_num: null
   id: -Ls3N32f9PtYnpwyyEoj
-  letter_symbol: V
   name: Voltage
+  symbol: V
   updated_at: null
 - created_at: 2019-10-25 19:24:07.275667
-  greek_symbol_num: null
   id: -Ls3N32fAQuZoqxzzFpk
-  letter_symbol: m
   name: Meters
+  symbol: m
   updated_at: null
 - created_at: 2019-10-25 19:24:07.275954
-  greek_symbol_num: null
   id: -Ls3N32fBRv_pry--Gql
-  letter_symbol: yd
   name: Yards
+  symbol: yd
   updated_at: null
 - created_at: 2019-10-25 19:24:07.276205
-  greek_symbol_num: null
   id: -Ls3N32fCSwaqsz00Hrm
-  letter_symbol: Db
   name: Decibels
+  symbol: Db
   updated_at: null
 - created_at: 2019-10-25 19:24:07.276560
-  greek_symbol_num: 48
   id: -Ls3N32ga3CkRDWYwvhy
-  letter_symbol: null
   name: Ohms
+  symbol: Ω
   updated_at: null
 - created_at: 2019-10-23 12:23:16.494153
-  greek_symbol_num: null
   id: -LrsZYnoW4YH4-6qsChk
-  letter_symbol: J
   name: Joules
+  symbol: J
   updated_at: null
 - created_at: 2019-10-23 12:23:16.494156
-  greek_symbol_num: null
   id: -LrsZYnoX5ZI507rtDil
-  letter_symbol: Hz
   name: Hertz
+  symbol: Hz
   updated_at: null
 - created_at: 2019-10-23 12:23:16.494158
-  greek_symbol_num: null
   id: -LrsZYnoY6_J618suEjm
-  letter_symbol: N
   name: Newton
+  symbol: N
   updated_at: null
 - created_at: 2019-10-23 12:23:16.494160
-  greek_symbol_num: null
   id: -LrsZYnoZ7aK729tvFkn
-  letter_symbol: atm
   name: Atmosphere
+  symbol: atm
   updated_at: null
 - created_at: 2019-10-23 12:23:16.494164
-  greek_symbol_num: null
   id: -LrsZYnoa9cM94BvxHmp
-  letter_symbol: Cal
   name: Calories
+  symbol: Cal
   updated_at: null
 - created_at: 2019-10-23 12:23:16.497833
-  greek_symbol_num: null
   id: -LrsZYnpRvNUNeddC4Z6
-  letter_symbol: in
   name: Inches
+  symbol: in
   updated_at: null
 - created_at: 2019-10-23 12:23:16.497836
-  greek_symbol_num: null
   id: -LrsZYnpSwOVOfeeD5_7
-  letter_symbol: ft
   name: Feet
+  symbol: ft
   updated_at: null
 - created_at: 2019-10-27 19:27:34.446497+00:00
-  greek_symbol_num: null
   id: -LsDg17haE7UvgLkSy4M
-  letter_symbol: rad
   name: Radians
+  symbol: rad
   updated_at: null
 - created_at: 2019-10-27 19:27:34.447185+00:00
-  greek_symbol_num: null
   id: -LsDg17ijH4Lk8yiSDMH
-  letter_symbol: sr
   name: Steradian
+  symbol: sr
   updated_at: null
 - created_at: 2019-10-27 19:27:34.447831+00:00
-  greek_symbol_num: null
   id: -LsDg17jRsAw1iXGoeUf
-  letter_symbol: Pa
   name: Pascal
+  symbol: Pa
   updated_at: null
 - created_at: 2019-10-27 19:27:34.448503+00:00
-  greek_symbol_num: null
   id: -LsDg17jStBx2jYHpfVg
-  letter_symbol: W
   name: Watt
+  symbol: W
   updated_at: null
 - created_at: 2019-10-27 19:27:34.449173+00:00
-  greek_symbol_num: null
   id: -LsDg17k4aww265nBAyX
-  letter_symbol: C
   name: Coulomb
+  symbol: C
   updated_at: null
 - created_at: 2019-10-27 19:27:34.449833+00:00
-  greek_symbol_num: null
   id: -LsDg17lPaQfexBpsue_
-  letter_symbol: F
   name: Farad
+  symbol: F
   updated_at: null
 - created_at: 2019-10-27 19:27:34.450317+00:00
-  greek_symbol_num: null
   id: -LsDg17lQbRgfyCqtvfa
-  letter_symbol: S
   name: Siemens
+  symbol: S
   updated_at: null
 - created_at: 2019-10-27 19:27:34.450841+00:00
-  greek_symbol_num: null
   id: -LsDg17mHq_s2AcxRuVl
-  letter_symbol: Wb
   name: Weber
+  symbol: Wb
   updated_at: null
 - created_at: 2019-10-27 19:27:34.451366+00:00
-  greek_symbol_num: null
   id: -LsDg17mIrat3BdySvWm
-  letter_symbol: F
   name: Tesla
+  symbol: F
   updated_at: null
 - created_at: 2019-10-27 19:27:34.451948+00:00
-  greek_symbol_num: null
   id: -LsDg17nmQ9AiA34Pp3J
-  letter_symbol: H
   name: Henry
+  symbol: H
   updated_at: null
 - created_at: 2019-10-27 19:27:34.452552+00:00
-  greek_symbol_num: null
   id: -LsDg17nnRABjB45Qq4K
-  letter_symbol: degC
   name: Degree Celsius
+  symbol: degC
   updated_at: null
 - created_at: 2019-10-27 19:27:34.452728+00:00
-  greek_symbol_num: null
   id: -LsDg17owfS2ZrdRGpx-
-  letter_symbol: lm
   name: Lumen
+  symbol: lm
   updated_at: null
 - created_at: 2019-10-27 19:27:34.452855+00:00
-  greek_symbol_num: null
   id: -LsDg17oxgT3_seSHqy0
-  letter_symbol: lux
   name: Lux
+  symbol: lux
   updated_at: null
 - created_at: 2019-10-27 19:27:34.453056+00:00
-  greek_symbol_num: null
   id: -LsDg17oyhU4atfTIrz1
-  letter_symbol: Bq
   name: Becquerel
+  symbol: Bq
   updated_at: null
 - created_at: 2019-10-27 19:27:34.453602+00:00
-  greek_symbol_num: null
   id: -LsDg17pVWpOt3sYmVFN
-  letter_symbol: Gy
   name: Gray
+  symbol: Gy
   updated_at: null
 - created_at: 2019-10-27 19:27:34.453792+00:00
-  greek_symbol_num: null
   id: -LsDg17pWXqPu4tZnWGO
-  letter_symbol: kat
   name: Katal
+  symbol: kat
+  updated_at: null
+- created_at: 2020-04-19 15:00:16.081092+00:00
+  id: -M5Hx3lF5_oTwrf12ZCW
+  name: Litres
+  symbol: L
   updated_at: null

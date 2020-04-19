@@ -97,7 +97,19 @@ class BaseModel(db.Model):
                     api_message=error_msg,
                     status_code=404,
                 )
+            elif isinstance(e.orig, errors.NotNullViolation):
+                missing_column_name = e.orig.pgerror.split(
+                    'ERROR:  null value in column "')
+                missing_column_name = missing_column_name[1].split('"')[0]
+                raise ModelOperationException(
+                    message=model_operations['column_must_have_a_value'].
+                    format(missing_column_name),
+                    api_message=model_operations['column_must_have_a_value'].
+                    format(missing_column_name),
+                    status_code=400,
+                )
             else:
+
                 raise e
 
     @classmethod

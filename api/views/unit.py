@@ -18,39 +18,15 @@ class UnitView(BaseOrgView, BasePaginatedView):
         'name': {
             'filter_type': 'ilike'
         },
-        'letter_symbol': {
-            'filter_type': 'ilike'
-        },
-        'greek_symbol': {
+        'symbol': {
             'filter_type': 'ilike'
         },
     }
     SCHEMA_EXCLUDE = ['organisation_id']
     SORT_KWARGS = {
-        'defaults': 'name,letter_symbol',
-        'sort_fields': {'name', 'letter_symbol'}
+        'defaults': 'name,symbol',
+        'sort_fields': {'name', 'symbol'}
     }
     PROTECTED_METHODS = ['GET', 'POST']
 
     ALLOWED_ROLES = {'POST': ['OWNER', 'ENGINEER', 'ADMIN']}
-
-    def post(self, org_id, user_data, membership):
-        input_data = request.get_json()
-        input_data['organisationId'] = org_id
-        unit = UnitSchema().load(input_data)
-
-        unit_already_exists = Unit.query.filter_by(
-            name=unit.name,
-            greek_symbol_num=unit.greek_symbol_num,
-            letter_symbol=unit.letter_symbol,
-            organisation_id=None,
-        ).count()
-        if unit_already_exists:
-            raise ResponseException(status_code=400,
-                                    message=Unit.__unique_violation_msg__)
-
-        unit.save()
-        unit_data = UnitSchema().dump_success_data(unit,
-                                                   CREATED.format('Unit'))
-
-        return unit_data, 201

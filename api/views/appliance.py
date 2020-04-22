@@ -71,7 +71,6 @@ class ApplianceView(BaseOrgView, BasePaginatedView):
             ApplianceParameter(
                 parameter_id=param,
                 appliance_id=appliance_obj.id,
-                organisation_id=org_id,
             ) for param in params
         ]
 

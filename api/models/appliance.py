@@ -15,6 +15,7 @@ class Appliance(UserActionBase, OrgBaseModel):
     appliance_parameter = db.relationship("ApplianceParameter",
                                           back_populates='appliance',
                                           lazy=True)
+    logs = db.relationship("Log", back_populates='appliance', lazy=True)
     __unique_constraints__ = ((('label', 'organisation_id',
                                 'appliance_category_id'),
                                'org_appliance_constraint'), )

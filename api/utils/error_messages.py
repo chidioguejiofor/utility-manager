@@ -2,6 +2,7 @@ serialization_error = {
     'required': "Missing data for required field.",
     'pass_is_required': 'Password field is required',
     'alpha_numeric': 'Only letters and numbers are allowed here',
+    'number_only': 'Only numbers are allowed here',
     'alpha_only': "Only Alphabets are allowed here",
     'invalid_email': 'Not a valid email address.',
     'already_exists': 'The {} already exists',

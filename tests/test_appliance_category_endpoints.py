@@ -23,7 +23,7 @@ def run_test_precondition():
 
 class TestCreateApplianceCategoryEndpoint:
     def test_appliance_category_should_be_created_when_user_is_an_admin_in_the_organisation(
-            self, init_db, client):
+        self, init_db, client):
         run_test_precondition()
         org = OrganisationGenerator.generate_model_obj(save=True)
         category_data = ApplianceCategoryGenerator.generate_api_input_data()
@@ -46,7 +46,7 @@ class TestCreateApplianceCategoryEndpoint:
         assert model.updated_by_id is None
 
     def test_should_fail_when_the_appliance_category_already_exists(
-            self, client, init_db):
+        self, client, init_db):
         run_test_precondition()
         org = OrganisationGenerator.generate_model_obj(save=True)
         category_data = ApplianceCategoryGenerator.generate_api_input_data()
@@ -79,7 +79,7 @@ class TestCreateApplianceCategoryEndpoint:
         assert len(response_body['errors']['description']) > 0
 
     def test_should_return_404_when_user_is_not_part_of_org(
-            self, init_db, client):
+        self, init_db, client):
         run_test_precondition()
         org = OrganisationGenerator.generate_model_obj(save=True)
         user = UserGenerator.generate_model_obj(save=True, verified=True)
@@ -97,7 +97,7 @@ class TestCreateApplianceCategoryEndpoint:
         assert response_body['status'] == 'error'
 
     def test_should_fail_when_the_user_is_not_an_admin(
-            self, init_db, client, add_user_to_organisation):
+        self, init_db, client, add_user_to_organisation):
         run_test_precondition()
         org = OrganisationGenerator.generate_model_obj(save=True)
         user = UserGenerator.generate_model_obj(save=True, verified=True)
@@ -116,7 +116,7 @@ class TestCreateApplianceCategoryEndpoint:
         assert response_body['status'] == 'error'
 
     def test_should_fail_when_the_user_is_not_verified(
-            self, init_db, client, add_user_to_organisation):
+        self, init_db, client, add_user_to_organisation):
         run_test_precondition()
         org = OrganisationGenerator.generate_model_obj(save=True)
         user = UserGenerator.generate_model_obj(save=True, verified=False)
@@ -138,7 +138,7 @@ class TestCreateApplianceCategoryEndpoint:
 
 class TestRetrieveApplianceCategory:
     def test_user_should_be_able_to_retrieve_data(
-            self, init_db, client, save_appliance_category_to_org):
+        self, init_db, client, save_appliance_category_to_org):
         run_test_precondition()
         params_objs, org = save_appliance_category_to_org(5)
         token = UserGenerator.generate_token(org.creator)
@@ -158,7 +158,7 @@ class TestRetrieveApplianceCategory:
         )
 
     def test_should_be_able_to_search_for_specific_appliance_category(
-            self, init_db, client, save_appliance_category_to_org):
+        self, init_db, client, save_appliance_category_to_org):
         run_test_precondition()
         params_objs, org = save_appliance_category_to_org(5)
         token = UserGenerator.generate_token(org.creator)
@@ -187,7 +187,7 @@ class TestRetrieveApplianceCategory:
 
 class TestRetrieveSingleApplianceCategory:
     def test_should_retrieve_appliance_category_when_no_parameter_is_associated_with_it(
-            self, init_db, client):
+        self, init_db, client):
         run_test_precondition()
         org = OrganisationGenerator.generate_model_obj(save=True)
         token = UserGenerator.generate_token(org.creator)
@@ -214,7 +214,7 @@ class TestRetrieveSingleApplianceCategory:
         assert response_body['data']['suggestedParameters'] == []
 
     def test_should_retrieve_category_with_suggested_parameters(
-            self, init_db, client, saved_parameters_to_org):
+        self, init_db, client, saved_parameters_to_org):
         run_test_precondition()
         params_objs, org = saved_parameters_to_org(5)
         token = UserGenerator.generate_token(org.creator)
@@ -251,17 +251,14 @@ class TestRetrieveSingleApplianceCategory:
         for parameter in params_objs[:2]:
             appliance_params.append(
                 ApplianceParameter(parameter_id=parameter.id,
-                                   appliance_id=appliance1.id,
-                                   organisation_id=org.id), )
+                                   appliance_id=appliance1.id))
         for parameter in params_objs[0:4]:
             appliance_params.append(
-                ApplianceParameter(organisation_id=org.id,
-                                   parameter_id=parameter.id,
+                ApplianceParameter(parameter_id=parameter.id,
                                    appliance_id=appliance2.id))
         for parameter in params_objs:
             appliance_params.append(
-                ApplianceParameter(organisation_id=org.id,
-                                   parameter_id=parameter.id,
+                ApplianceParameter(parameter_id=parameter.id,
                                    appliance_id=appliance3.id))
         ApplianceParameter.bulk_create(appliance_params)
         url = RETRIEVE_URL.format(org.id, category.id)
@@ -279,7 +276,7 @@ class TestRetrieveSingleApplianceCategory:
         assert len(response_body['data']['suggestedParameters']) == 5
 
     def test_should_return_404_when_category_is_not_found(
-            self, init_db, client):
+        self, init_db, client):
         run_test_precondition()
         org = OrganisationGenerator.generate_model_obj(save=True)
         token = UserGenerator.generate_token(org.creator)

@@ -4,6 +4,7 @@ msg_dict = {
 }
 
 CREATED = 'The {} was created successfully'
+SAVED = '{} was saved successfully'
 LOGIN = 'User was successfully logged in'
 REG_VERIFIED = 'Your registration has been verified successfully'
 PASSWORD_CHANGED = 'Your password has been changed successfully'

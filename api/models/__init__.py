@@ -9,3 +9,4 @@ from .invitation import Invitation
 from .appliance_category import ApplianceCategory
 from .appliance_parameter import ApplianceParameter
 from .appliance import Appliance
+from .log import Log, LogValue

@@ -5,3 +5,4 @@ from .redis import RedisMock
 from .organisation import OrganisationGenerator
 from .base import fake
 from .paramter import ParameterGenerator
+from .appliance import ApplianceGenerator

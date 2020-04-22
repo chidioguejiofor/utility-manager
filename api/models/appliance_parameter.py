@@ -1,9 +1,9 @@
 from settings import db
-from .base import UserActionBase, OrgBaseModel
+from .base import BaseModel
 from api.utils.error_messages import serialization_error
 
 
-class ApplianceParameter(OrgBaseModel, UserActionBase):
+class ApplianceParameter(BaseModel):
     _ORG_ID_NULLABLE = False
     appliance_id = db.Column(db.String(21), db.ForeignKey('Appliance.id'))
 
@@ -20,8 +20,7 @@ class ApplianceParameter(OrgBaseModel, UserActionBase):
                                 back_populates='appliance_parameter',
                                 lazy=True)
 
-    __unique_constraints__ = ((('appliance_id', 'parameter_id',
-                                'organisation_id'),
+    __unique_constraints__ = ((('appliance_id', 'parameter_id'),
                                'appliance_parameter_unique_indx'), )
 
     __unique_violation_msg__ = serialization_error['already_added'].format(

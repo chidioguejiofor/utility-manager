@@ -14,7 +14,9 @@ class ApplianceCategoryGenerator(BaseGenerator):
 
     @classmethod
     def generate_model_obj_dict(cls, org_id, **kwargs):
+        name = kwargs.pop('name', fake.name()[:30])
         return {
+            'name': name,
             **cls.generate_api_input_data(), 'organisation_id': org_id,
             **kwargs
         }

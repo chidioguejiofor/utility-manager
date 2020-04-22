@@ -133,3 +133,10 @@ def assert_user_not_in_organisation(response):
     assert response_body['message'] == serialization_error['not_found'].format(
         'Organisation')
     assert 'data' not in response_body
+
+
+def assert_user_does_not_have_permission(response):
+    assert response.status_code == 403
+    response_body = json.loads(response.data)
+    assert response_body['message'] == authentication_errors['forbidden']
+    assert response_body['status'] == 'error'

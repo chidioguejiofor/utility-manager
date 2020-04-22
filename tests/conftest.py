@@ -2,9 +2,9 @@ import pytest
 from unittest.mock import Mock
 from settings import create_app
 
-from api.models import Unit, Membership, db, Invitation, Role, Parameter, ApplianceCategory
+from api.models import Unit, Membership, db, Invitation, Role, Parameter, ApplianceCategory, ValueTypeEnum
 from .mocks import (ApplianceCategoryGenerator, OrganisationGenerator,
-                    UserGenerator, ParameterGenerator)
+                    UserGenerator, ParameterGenerator, ApplianceGenerator)
 from seeders.seeders_manager import SeederManager
 
 
@@ -81,6 +81,52 @@ def saved_org_and_user_generator(unit_objs):
     user_obj = UserGenerator.generate_model_obj(save=True, verified=True)
     org = OrganisationGenerator.generate_model_obj(user_obj.id, save=True)
     return user_obj, org
+
+
+@pytest.fixture(scope='session')
+def saved_appliance_generator():
+    def create_and_return_mock_appliances(user_role=None,
+                                          num_of_numeric_units=5,
+                                          num_of_text_units=0):
+        org = OrganisationGenerator.generate_model_obj(save=True)
+        numeric_params = []
+        text_params = []
+        joule_unit = Unit.query.filter_by(symbol='A').first()
+        for _ in range(num_of_numeric_units):
+            numeric_params.append(
+                ParameterGenerator.generate_model_obj(unit_id=joule_unit.id,
+                                                      organisation_id=org.id,
+                                                      save=False))
+        for _ in range(num_of_text_units):
+            text_params.append(
+                ParameterGenerator.generate_model_obj(
+                    value_type=ValueTypeEnum.STRING,
+                    organisation_id=org.id,
+                    save=False))
+        Parameter.bulk_create(numeric_params + text_params)
+
+        appliance_category = ApplianceCategoryGenerator.generate_model_obj(
+            org_id=org.id, save=True)
+        # Appliance
+        appliance_model, _ = ApplianceGenerator.generate_model_obj(
+            org_id=org.id,
+            parameters=numeric_params + text_params,
+            appliance_category_id=appliance_category.id,
+            save=True)
+        user_obj = org.creator
+        if user_role:
+            user_role_id = Role.query.filter_by(name=user_role).first().id
+            user_obj = UserGenerator.generate_model_obj(save=True,
+                                                        verified=True)
+            Membership(
+                user_id=user_obj.id,
+                organisation_id=org.id,
+                role_id=user_role_id,
+            ).save()
+
+        return org, user_obj, numeric_params, text_params, appliance_model
+
+    return create_and_return_mock_appliances
 
 
 @pytest.fixture(scope='function')

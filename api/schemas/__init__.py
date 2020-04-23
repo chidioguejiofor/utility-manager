@@ -13,3 +13,4 @@ from .role import Role as RoleSchema
 from .invitation import Invitation as InvitationSchema, InvitationRequestSchema, InvitationRequestWithoutInvitesSchema
 from .appliance_category import ApplianceCategory as ApplianceCategorySchema
 from .appliance import Appliance as ApplianceSchema
+from .log import Log as LogSchema

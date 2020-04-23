@@ -63,7 +63,8 @@ class BaseModel(db.Model):
             sqlalchemy.exc.SQLAlchemyError: when any database error occurs
         """
         self.before_save()
-        self.id = IDGenerator.generate_id()
+        if not self.id:
+            self.id = IDGenerator.generate_id()
 
         db.session.add(self)
         self._commit_or_flush(commit)

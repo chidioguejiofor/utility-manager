@@ -5,6 +5,7 @@ from api.models import ApplianceCategory, db, Appliance, ApplianceParameter, Par
 from tests.mocks.user import UserGenerator
 from tests.mocks.organisation import OrganisationGenerator
 from tests.mocks.appliance_category import ApplianceCategoryGenerator
+from tests.mocks.appliance import ApplianceGenerator
 from tests.mocks.paramter import ParameterGenerator
 
 import json
@@ -43,7 +44,7 @@ class TestCreateApplianceEndpoints:
     def test_appliance_should_be_created_when_user_is_an_admin_in_the_organisation(
         self, init_db, client):
         org, category_model, parameter = self.run_test_precondition(client)
-        json_data = self.generate_json(parameter.id)
+        json_data = ApplianceGenerator.generate_api_input_data([parameter.id])
         response = client.post(CREATE_URL.format(org.id, category_model.id),
                                data=json.dumps(json_data),
                                content_type="application/json")
@@ -54,7 +55,7 @@ class TestCreateApplianceEndpoints:
         assert response_body['status'] == 'success'
 
         model = Appliance.query.get(response_body['data']['id'])
-        assert model.label == json_data['label'].capitalize()
+        assert model.label == json_data['label']
         assert model.specs == json_data['specs']
         assert model.created_by_id == org.creator.id
         assert model.updated_by_id is None
@@ -64,7 +65,7 @@ class TestCreateApplianceEndpoints:
     def test_should_fail_when_the_appliance_already_exists(
         self, client, init_db):
         org, category_model, parameter = self.run_test_precondition(client)
-        json_data = self.generate_json(parameter.id)
+        json_data = ApplianceGenerator.generate_api_input_data([parameter.id])
         response = client.post(CREATE_URL.format(org.id, category_model.id),
                                data=json.dumps(json_data),
                                content_type="application/json")
@@ -95,7 +96,7 @@ class TestCreateApplianceEndpoints:
         user = UserGenerator.generate_model_obj(save=True, verified=True)
         org, category_model, parameter = self.run_test_precondition(client,
                                                                     user=user)
-        json_data = self.generate_json(parameter.id)
+        json_data = ApplianceGenerator.generate_api_input_data([parameter.id])
         response = client.post(CREATE_URL.format(org.id, 'abas'),
                                data=json.dumps(json_data),
                                content_type="application/json")
@@ -109,7 +110,7 @@ class TestCreateApplianceEndpoints:
     def test_should_fail_when_there_are_invalid_parameters_in_the_request(
         self, init_db, client):
         org, category_model, parameter = self.run_test_precondition(client)
-        json_data = self.generate_json(parameter.id)
+        json_data = ApplianceGenerator.generate_api_input_data([parameter.id])
         json_data['parameters'].append('id1')
         json_data['parameters'].append('id1')
         json_data['parameters'].append('id2')
@@ -125,7 +126,7 @@ class TestCreateApplianceEndpoints:
     def test_should_return_404_when_appliance_category_is_not_found(
         self, init_db, client):
         org, category_model, parameter = self.run_test_precondition(client)
-        json_data = self.generate_json(parameter.id)
+        json_data = ApplianceGenerator.generate_api_input_data([parameter.id])
         response = client.post(CREATE_URL.format(org.id, 'abas'),
                                data=json.dumps(json_data),
                                content_type="application/json")

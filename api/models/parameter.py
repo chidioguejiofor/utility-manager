@@ -6,7 +6,7 @@ from api.utils.error_messages import serialization_error
 
 class ValueType(enum.Enum):
     NUMERIC = 0
-    STRING = 1
+    TEXT = 1
     DATE_TIME = 2
     DATE = 3
     ENUM = 4

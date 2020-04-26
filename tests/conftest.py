@@ -100,7 +100,7 @@ def saved_appliance_generator():
         for _ in range(num_of_text_units):
             text_params.append(
                 ParameterGenerator.generate_model_obj(
-                    value_type=ValueTypeEnum.STRING,
+                    value_type=ValueTypeEnum.TEXT,
                     organisation_id=org.id,
                     save=False))
         Parameter.bulk_create(numeric_params + text_params)

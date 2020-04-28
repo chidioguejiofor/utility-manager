@@ -8,4 +8,3 @@ from .invitation import OrgInvitations
 from .roles import OrgRoleView
 from .appliaance_category import ApplianceCategoryView
 from .appliance import ApplianceView
-from .logs import LogsView

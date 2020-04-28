@@ -4,7 +4,8 @@ from settings import create_app
 
 from api.models import Unit, Membership, db, Invitation, Role, Parameter, ApplianceCategory, ValueTypeEnum
 from .mocks import (ApplianceCategoryGenerator, OrganisationGenerator,
-                    UserGenerator, ParameterGenerator, ApplianceGenerator)
+                    UserGenerator, ParameterGenerator, ApplianceGenerator,
+                    LogGenerator)
 from seeders.seeders_manager import SeederManager
 
 
@@ -85,10 +86,15 @@ def saved_org_and_user_generator(unit_objs):
 
 @pytest.fixture(scope='session')
 def saved_appliance_generator():
-    def create_and_return_mock_appliances(user_role=None,
-                                          num_of_numeric_units=5,
-                                          num_of_text_units=0):
-        org = OrganisationGenerator.generate_model_obj(save=True)
+    def create_and_return_mock_appliances(
+        user_role=None,
+        num_of_numeric_units=5,
+        num_of_text_units=0,
+        *,
+        org=None,
+    ):
+        if not org:
+            org = OrganisationGenerator.generate_model_obj(save=True)
         numeric_params = []
         text_params = []
         joule_unit = Unit.query.filter_by(symbol='A').first()
@@ -127,6 +133,28 @@ def saved_appliance_generator():
         return org, user_obj, numeric_params, text_params, appliance_model
 
     return create_and_return_mock_appliances
+
+
+@pytest.fixture(scope='session')
+def saved_logs_generator():
+    def _create_and_return_mock_logs(
+        appliance_model,
+        params,
+        num_of_logs=5,
+        value_mapper=None,
+    ):
+        logs = []
+        for _ in range(num_of_logs):
+            log_model, _ = LogGenerator.generate_model_obj(
+                appliance_model,
+                save=True,
+                parameters=params,
+                value_mapper=value_mapper)
+            logs.append(log_model)
+
+        return logs
+
+    return _create_and_return_mock_logs
 
 
 @pytest.fixture(scope='function')

@@ -45,6 +45,7 @@ class BasePaginatedView(SearchFilterMixin, PaginatorMixin):
     RETRIEVE_SUCCESS_MSG = None
     SCHEMA_EXCLUDE = []
     EAGER_LOADING_FIELDS = []
+    SEARCH_FILTER_ARGS = {}
 
     def get(self, *args, **kwargs):
         self._joined_fields = []  # used in BaseFilterMixin

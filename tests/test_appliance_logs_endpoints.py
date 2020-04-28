@@ -1,11 +1,17 @@
 import json
-from tests.assertions import add_cookie_to_client, assert_user_not_in_organisation, assert_user_does_not_have_permission
-from api.utils.helper_functions import capitalize_each_word_in_sentence
-from api.utils.success_messages import (SAVED)
+from tests.assertions import (
+    add_cookie_to_client, assert_user_not_in_organisation,
+    assert_user_does_not_have_permission, assert_paginator_data_values,
+assert_unverified_user
+)
+from api.models import Log, LogValue
+from api.utils.success_messages import (SAVED, RETRIEVED)
 from api.utils.error_messages import serialization_error
 
 from tests.mocks.user import UserGenerator
 from tests.mocks.paramter import ParameterGenerator
+from tests.mocks.log import LogGenerator
+
 URL = '/api/org/{}/appliances/{}/logs'
 
 
@@ -152,3 +158,109 @@ class TestAddLogToApplianceEndpoint:
             'not_found'].format('Appliance')
         assert response.status_code == 400
         assert response_body['status'] == 'error'
+
+
+class TestRetrieveLogsEndpoint:
+    def test_permitted_user_should_be_able_to_retrieve_logs(
+        self, init_db, client, saved_appliance_generator, saved_logs_generator
+    ):
+        TOTAL_LOGS = 4
+        org, user_obj, numeric_params, text_params, appliance_model = saved_appliance_generator(
+            'ENGINEER', 3, 3)
+        params = numeric_params + text_params
+
+        value_mapper = {
+            numeric_param.id: index* 90 for index, numeric_param in enumerate(numeric_params)
+        }
+        for text_param in text_params:
+            value_mapper[text_param.id] = 'This is a sample text log'
+        created_logs = saved_logs_generator( appliance_model, params, TOTAL_LOGS, value_mapper=value_mapper)
+
+        token = UserGenerator.generate_token(user_obj)
+        add_cookie_to_client(client, user_obj, token)
+        created_params = numeric_params + text_params
+        response_body = assert_paginator_data_values(
+            user=user_obj,
+            created_objs=created_params,
+            client=client,
+            token=token,
+            url=URL.format(org.id, appliance_model.id),
+            success_msg=RETRIEVED.format('Logs'),
+            current_page=1,
+            total_objects=TOTAL_LOGS,
+            max_objects_per_page=10,
+            total_pages=1,
+            next_page=None,
+            prev_page=None,
+        )
+        # import pdb; pdb.set_trace()
+        logs_id_mapper = {param.id: param for param in created_logs}
+
+        for retrieved_log in response_body['data']:
+            log_model = logs_id_mapper.get(retrieved_log['id'])
+            assert log_model is not None
+            for log_value in log_model.log_values:
+                assert str(value_mapper.get(log_value.parameter_id)) == log_value.value
+
+    def test_should_retrieve_the_logs_of_only_the_specified_appliance_id(
+            self, init_db, client, saved_appliance_generator, saved_logs_generator
+    ):
+        TOTAL_LOGS_FOR_EACH_APPLIANCE =4
+        org, user_obj, numeric_params, text_params, appliance_model = saved_appliance_generator(
+            'ENGINEER', 3, 3)
+        #  This would add logs for appliance model 2 in the same organisation
+        org, _, _, _, appliance_model2 = saved_appliance_generator(
+            'ENGINEER', 3, 3, org=org)
+        params = numeric_params + text_params
+
+        #  Creates logs for both appliances
+        saved_logs_generator(appliance_model, params, TOTAL_LOGS_FOR_EACH_APPLIANCE)
+        saved_logs_generator(appliance_model2, params, TOTAL_LOGS_FOR_EACH_APPLIANCE)
+
+        token = UserGenerator.generate_token(user_obj)
+        add_cookie_to_client(client, user_obj, token)
+        created_params = numeric_params + text_params
+
+        #  This queries the API for appliance one and checks that it has the correct number of appliances
+        assert_paginator_data_values(
+            user=user_obj,
+            created_objs=created_params,
+            client=client,
+            token=token,
+            url=URL.format(org.id, appliance_model.id),
+            success_msg=RETRIEVED.format('Logs'),
+            current_page=1,
+            total_objects=TOTAL_LOGS_FOR_EACH_APPLIANCE,
+            max_objects_per_page=10,
+            total_pages=1,
+            next_page=None,
+            prev_page=None,
+        )
+
+        # Checks that the Log has more that 8 logs
+        assert Log.query.filter_by(organisation_id=org.id).count() == TOTAL_LOGS_FOR_EACH_APPLIANCE * 2
+        assert LogValue.query.join(
+            Log, (Log.id == LogValue.log_id) & (Log.organisation_id == org.id)
+        ).count()  == 2 * TOTAL_LOGS_FOR_EACH_APPLIANCE * len(params)
+
+
+    def test_should_fail_when_user_is_not_verified(self, init_db, client,
+                                                   saved_appliance_generator):
+        org, _, numeric_params, text_params, appliance_model = saved_appliance_generator(
+            'ENGINEER', 3, 3)
+        user_obj = UserGenerator.generate_model_obj(save=True)
+        token = UserGenerator.generate_token(user_obj)
+        add_cookie_to_client(client, user_obj, token)
+        url = URL.format(org.id, appliance_model.id)
+        assert_unverified_user(client, token, url, user=user_obj)
+
+    def test_should_fail_when_the_user_is_not_part_of_org(
+        self, init_db, client, saved_appliance_generator):
+        org, _, numeric_params, text_params, appliance_model = saved_appliance_generator(
+            'ENGINEER', 3, 3)
+        user_obj = UserGenerator.generate_model_obj(verified=True, save=True)
+        token = UserGenerator.generate_token(user_obj)
+        add_cookie_to_client(client, user_obj, token)
+        url = URL.format(org.id, appliance_model.id)
+        response = client.get(url)
+        assert_user_not_in_organisation(response)

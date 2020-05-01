@@ -2,6 +2,8 @@ import enum
 from settings import db
 from .base import OrgBaseModel, UserActionBase
 from api.utils.error_messages import serialization_error
+from .appliance_parameter import ApplianceParameter
+from .appliance import Appliance
 
 
 class ValueType(enum.Enum):
@@ -35,3 +37,16 @@ class Parameter(UserActionBase, OrgBaseModel):
                                'parameter_name_and_org_unique_constraint'), )
     __unique_violation_msg__ = serialization_error['exists_in_org'].format(
         'Parameter')
+
+    @classmethod
+    def get_parameters_in_appliance(cls, org_id, appliance_id):
+        param_test = (ApplianceParameter.parameter_id == cls.id) & (
+            cls.organisation_id == org_id)
+        appliance_test = ((ApplianceParameter.appliance_id == Appliance.id) &
+                          (Appliance.id == appliance_id) &
+                          (Appliance.organisation_id == org_id))
+
+        return db.session.query(cls).join(
+            ApplianceParameter,
+            param_test,
+        ).join(Appliance, appliance_test)

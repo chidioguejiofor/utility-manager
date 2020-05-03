@@ -1,4 +1,6 @@
 import pytest
+import random
+from datetime import datetime
 from unittest.mock import Mock
 from settings import create_app
 
@@ -97,10 +99,11 @@ def saved_appliance_generator():
             org = OrganisationGenerator.generate_model_obj(save=True)
         numeric_params = []
         text_params = []
-        joule_unit = Unit.query.filter_by(symbol='A').first()
+        unit_options = Unit.query.all()
         for _ in range(num_of_numeric_units):
+            rand_unit = unit_options[random.randint(0, len(unit_options) - 1)]
             numeric_params.append(
-                ParameterGenerator.generate_model_obj(unit_id=joule_unit.id,
+                ParameterGenerator.generate_model_obj(unit_id=rand_unit.id,
                                                       organisation_id=org.id,
                                                       save=False))
         for _ in range(num_of_text_units):
@@ -137,19 +140,23 @@ def saved_appliance_generator():
 
 @pytest.fixture(scope='session')
 def saved_logs_generator():
-    def _create_and_return_mock_logs(
-        appliance_model,
-        params,
-        num_of_logs=5,
-        value_mapper=None,
-    ):
+    def _create_and_return_mock_logs(appliance_model,
+                                     params,
+                                     num_of_logs=5,
+                                     value_mapper=None,
+                                     log_datetimes=None):
+        log_datetimes = [datetime.now()
+                         ] if not log_datetimes else log_datetimes
         logs = []
-        for _ in range(num_of_logs):
+        for index in range(num_of_logs):
+            mapper = value_mapper[index] if isinstance(value_mapper,
+                                                       list) else value_mapper
             log_model, _ = LogGenerator.generate_model_obj(
                 appliance_model,
                 save=True,
                 parameters=params,
-                value_mapper=value_mapper)
+                value_mapper=mapper,
+                log_date_time=log_datetimes[index % len(log_datetimes)])
             logs.append(log_model)
 
         return logs

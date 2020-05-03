@@ -1,5 +1,6 @@
 from .base import fake, BaseGenerator
 from api.models import Log, LogValue, ValueTypeEnum, Parameter, ApplianceParameter, Appliance
+from datetime import datetime, timedelta
 
 
 class LogGenerator(BaseGenerator):
@@ -13,13 +14,18 @@ class LogGenerator(BaseGenerator):
                            save=True,
                            value_mapper=None,
                            parameters=None,
+                           log_date_time=None,
                            **kwargs):
+        log_date_time = datetime.now() if not log_date_time else log_date_time
         if not value_mapper:
             value_mapper = {}
 
         log_values = []
-        log_model = Log(appliance_id=appliance.id,
-                        organisation_id=appliance.organisation_id)
+        log_model = Log(
+            appliance_id=appliance.id,
+            organisation_id=appliance.organisation_id,
+            created_at=log_date_time,
+        )
         log_model.save(commit=False)
         if not parameters:
             parameters = Parameter.query.join(

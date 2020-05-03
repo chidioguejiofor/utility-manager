@@ -33,6 +33,7 @@ raven = {extras = ["flask"],version = "*"}
 blinker = "*"
 werkzeug = "==0.16.1"
 pillow = "*"
+pandas = "*"
 
 [dev-packages]
 yapf = "*"

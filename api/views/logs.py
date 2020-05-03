@@ -1,11 +1,90 @@
+import pandas as pd
+from datetime import datetime, timedelta
+from dateutil import parser, tz
+from sqlalchemy.sql import functions
+from sqlalchemy import cast, Date
+from flask import make_response
 from api.utils.exceptions import ResponseException
 from api.utils.error_messages import serialization_error
 from .base import BaseOrgView, BasePaginatedView
 from settings import org_endpoint
 from flask import request
-from api.models import ValueTypeEnum, Log, LogValue, Parameter
+from api.models import ValueTypeEnum, Log, LogValue, Parameter, db, Unit
 from api.schemas import LogSchema
 from api.utils.success_messages import SAVED, RETRIEVED
+
+
+@org_endpoint('/appliances/<string:appliance_id>/export-logs')
+class ExportLogsView(BaseOrgView):
+    PROTECTED_METHODS = ['GET']
+
+    def parse_seconds_data(self):
+        try:
+            seconds_offset = int(request.args.get('seconds_offset', 0))
+        except ValueError:
+            seconds_offset = 0
+
+        if seconds_offset > 12 * 60 * 60 or seconds_offset < -12 * 60 * 60:
+            seconds_offset = seconds_offset
+        try:
+            start_date = request.args.get('start_date', str(datetime.utcnow()))
+            start_date = parser.parse(start_date)
+            end_date = request.args.get('end_date',
+                                        str(start_date - timedelta(days=30)))
+            end_date = parser.parse(end_date)
+            if end_date > start_date or start_date - end_date > timedelta(
+                    days=366):
+                temp = start_date
+                start_date = end_date
+                end_date = temp
+        except Exception:
+            start_date = datetime.utcnow()
+            end_date = datetime.utcnow() - timedelta(days=30)
+
+        return seconds_offset, start_date.date(), end_date.date()
+
+    def get(self, org_id, user_data, appliance_id, membership, **kwargs):
+        seconds_offset, start_date, end_date = self.parse_seconds_data()
+        date_created_key = 'Date Created'
+        log_data = db.session.query(
+            Log.id, Log.created_at, Parameter.name,
+            functions.concat(LogValue.value, ' ', Unit.symbol)).join(
+                LogValue,
+                (LogValue.log_id == Log.id) &
+                (Log.appliance_id == appliance_id) &
+                (cast(Log.created_at, Date) >= end_date) &
+                (cast(Log.created_at, Date) <= start_date),
+            ).join(Parameter, Parameter.id == LogValue.parameter_id).join(
+                Unit,
+                Parameter.unit_id == Unit.id,
+                isouter=True,
+            ).all()
+
+        if len(log_data) == 0:
+            raise ResponseException(
+                serialization_error['not_found'].format(
+                    'Logs with specified filters'), 404)
+
+        # This pivots the columns and generates the report
+        df = pd.DataFrame(
+            log_data,
+            columns=['log_id', date_created_key, 'parameter', 'value'])
+        pivoted_df = df.pivot(index='log_id',
+                              columns='parameter',
+                              values='value')
+        joined_df = pd.merge(df[['log_id', date_created_key]],
+                             pivoted_df,
+                             on='log_id',
+                             how='inner').drop_duplicates()
+        joined_df[date_created_key] = joined_df[date_created_key].apply(
+            lambda date: date.astimezone(tz.tzoffset(None, seconds_offset)))
+        del joined_df['log_id']
+
+        resp = make_response(joined_df.to_csv(index=False))
+        resp.headers[
+            "Content-Disposition"] = "attachment; filename=exported_log_file.csv"
+        resp.headers["Content-Type"] = "text/csv"
+        return resp
 
 
 @org_endpoint('/logs')

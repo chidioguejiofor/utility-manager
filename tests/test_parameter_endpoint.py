@@ -6,13 +6,10 @@ from api.models import (
     db,
     Role,
     Parameter,
-    Organisation,
-    User,
 )
 from api.utils.error_messages import serialization_error, parameter_errors, authentication_errors
 from api.utils.success_messages import CREATED, RETRIEVED
 from .mocks.user import UserGenerator
-from api.utils.constants import COOKIE_TOKEN_KEY
 from .assertions import add_cookie_to_client, assert_paginator_data_values
 PARAMETER_ENDPOINTS = '/api/org/{}/parameters'
 

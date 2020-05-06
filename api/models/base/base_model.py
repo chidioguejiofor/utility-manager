@@ -46,6 +46,10 @@ class BaseModel(db.Model):
     def after_save(self, *args, **kwargs):
         pass
 
+    def generate_id(self):
+        if not self.id:
+            self.id = IDGenerator.generate_id()
+
     def save(self, commit=True):
         """Saves a new model to the session
 
@@ -63,8 +67,7 @@ class BaseModel(db.Model):
             sqlalchemy.exc.SQLAlchemyError: when any database error occurs
         """
         self.before_save()
-        if not self.id:
-            self.id = IDGenerator.generate_id()
+        self.generate_id()
 
         db.session.add(self)
         self._commit_or_flush(commit)
@@ -224,6 +227,7 @@ class OrgBaseModel(BaseModel):
 
 class UserActionBase(AbstractConcreteBase):
     __back_populates__kwargs__ = None  # should be overriden in concrete class
+    _IS_CREATED_BY_NULLABLE = True
 
     @declared_attr
     def created_by_id(cls):
@@ -231,7 +235,7 @@ class UserActionBase(AbstractConcreteBase):
                          db.ForeignKey('User.id',
                                        ondelete='RESTRICT',
                                        onupdate='CASCADE'),
-                         nullable=True)
+                         nullable=cls._IS_CREATED_BY_NULLABLE)
 
     @declared_attr
     def updated_by_id(cls):

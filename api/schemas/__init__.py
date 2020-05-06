@@ -14,3 +14,5 @@ from .invitation import Invitation as InvitationSchema, InvitationRequestSchema,
 from .appliance_category import ApplianceCategory as ApplianceCategorySchema
 from .appliance import Appliance as ApplianceSchema
 from .log import Log as LogSchema
+from .reports import (ReportSection as ReportSectionSchema, Report as
+                      ReportSchema, ReportColumn as ReportColumnSchema)

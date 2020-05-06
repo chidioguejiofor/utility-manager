@@ -1,4 +1,4 @@
-from settings import endpoint
+from settings import org_endpoint
 from flask import request
 from .base import BaseOrgView, BasePaginatedView
 from api.models import Parameter
@@ -6,7 +6,7 @@ from api.schemas import ParameterSchema
 from api.utils.success_messages import CREATED, RETRIEVED
 
 
-@endpoint('/org/<string:org_id>/parameters')
+@org_endpoint('/parameters')
 class ParameterView(BaseOrgView, BasePaginatedView):
     __model__ = Parameter
     __SCHEMA__ = ParameterSchema

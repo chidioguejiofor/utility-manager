@@ -1,13 +1,15 @@
 serialization_error = {
     'required': "Missing data for required field.",
+    'invalid_range': '{} is invalid',
+    'f1_must_be_gt_f2': 'Your {} must be more than or equal to {}',
+    'f1_must_be_lt_f2': 'Your {} must be less than or equal to {}',
     'pass_is_required': 'Password field is required',
     'alpha_numeric': 'Only letters and numbers are allowed here',
     'number_only': 'Only numbers are allowed here',
     'alpha_only': "Only Alphabets are allowed here",
     'invalid_email': 'Not a valid email address.',
     'already_exists': 'The {} already exists',
-    'invalid_field_data':
-    "There are some fields data you provided that are invalid",
+    'invalid_field_data': "There are some data you provided that are invalid",
     'min_length_error':
     'This field must be greater than or equal to {} characters',
     'max_length_error': 'This field must be less than {} characters',

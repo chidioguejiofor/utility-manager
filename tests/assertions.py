@@ -5,11 +5,13 @@ from api.utils.error_messages import authentication_errors, serialization_error
 from api.utils.constants import CONFIRM_TOKEN, COOKIE_TOKEN_KEY, REDIS_TOKEN_HASH_KEY
 from api.services.redis_util import RedisUtil
 from api.utils.id_generator import IDGenerator
+from .mocks.user import UserGenerator
 
 
-def add_cookie_to_client(client, user, token):
+def add_cookie_to_client(client, user, token=None):
     redis_hash = f'{user.id}_{REDIS_TOKEN_HASH_KEY}'
     token_id = IDGenerator.generate_id()
+    token = token if token else UserGenerator.generate_token(user)
     RedisUtil.hset(redis_hash, token_id, token)
 
     client.set_cookie('/', COOKIE_TOKEN_KEY, f'{user.id}/{token_id}')
@@ -59,6 +61,7 @@ def assert_successful_response(response, message, status_code=200):
     assert response.status_code == status_code
     assert response_body['message'] == message
     assert response_body['status'] == 'success'
+    return response_body
 
 
 def assert_when_token_is_missing(response):

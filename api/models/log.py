@@ -15,7 +15,8 @@ class Log(UserActionBase, OrgBaseModel):
 
 
 class LogValue(BaseModel):
-    value = db.Column(db.String)
+    text_value = db.Column(db.String)
+    numeric_value = db.Column(db.Float(precision=2), nullable=True)
     parameter_id = db.Column(
         db.String(21),
         db.ForeignKey('Parameter.id'),

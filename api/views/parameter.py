@@ -10,9 +10,10 @@ from api.utils.success_messages import CREATED, RETRIEVED
 class ParameterView(BaseOrgView, BasePaginatedView):
     __model__ = Parameter
     __SCHEMA__ = ParameterSchema
-    RETRIEVE_SUCCESS_MSG = RETRIEVED.format('Parameter')
     ALLOWED_ROLES = {'POST': ['MANAGER', 'OWNER']}
     PROTECTED_METHODS = ['POST', 'GET']
+    RETRIEVE_SUCCESS_MSG = RETRIEVED.format('Parameter')
+
     SEARCH_FILTER_ARGS = {
         'name': {
             'filter_type': 'ilike'
@@ -33,6 +34,7 @@ class ParameterView(BaseOrgView, BasePaginatedView):
     def post(self, org_id, user_data, membership):
         exclude_fields = ['created_by', 'updated_by', 'organisation_id']
         json_data = request.get_json()
+        json_data = json_data if json_data else {}
         json_data['organisationId'] = org_id
         json_data['createdById'] = user_data['id']
         param_obj = ParameterSchema().load(json_data)

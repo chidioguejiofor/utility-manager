@@ -1,16 +1,18 @@
+from sqlalchemy import func
 from api.utils.exceptions import ResponseException
 from api.utils.error_messages import serialization_error
-from .base import BaseOrgView, BasePaginatedView
+from .base import BaseOrgView, BasePaginatedView, BaseValidateRelatedOrgModelMixin
 from settings import org_endpoint
 from flask import request
-from api.models import Parameter, ApplianceParameter, ApplianceCategory, Appliance
+from api.models import db, Parameter, ApplianceParameter, ApplianceCategory, Appliance, Organisation
 from api.schemas import ApplianceSchema
-from api.schemas import LogSchema, ParameterSchema
-from api.utils.success_messages import SAVED, RETRIEVED, CREATED
+from api.schemas import ParameterSchema
+from api.utils.success_messages import RETRIEVED, CREATED
 
 
 @org_endpoint('/appliance-category/<string:category_id>/appliances')
-class ApplianceView(BaseOrgView, BasePaginatedView):
+class ApplianceView(BaseOrgView, BasePaginatedView,
+                    BaseValidateRelatedOrgModelMixin):
     __model__ = Appliance
     __SCHEMA__ = ApplianceSchema
     PROTECTED_METHODS = ['POST', 'GET']
@@ -26,6 +28,21 @@ class ApplianceView(BaseOrgView, BasePaginatedView):
 
     SORT_KWARGS = {'defaults': 'created_at', 'sort_fields': {'created_at'}}
 
+    VALIDATE_RELATED_KWARGS = {
+        "parameter_ids": {
+            'model':
+            Parameter,
+            'err_message':
+            serialization_error['not_found'].format('Some parameters')
+        },
+        "category_id": {
+            "model":
+            ApplianceCategory,
+            'err_message':
+            serialization_error['not_found'].format('Appliance Category')
+        },
+    }
+
     def filter_get_method_query(self, query, *args, org_id, **kwargs):
         return query.filter(
             self.__model__.appliance_category_id == kwargs['category_id'])
@@ -37,27 +54,13 @@ class ApplianceView(BaseOrgView, BasePaginatedView):
         json_data['created_by_id'] = user_data['id']
         json_data['appliance_category_id'] = category_id
         validated_data = ApplianceSchema().load(json_data)
+        param_ids = set(validated_data['parameters'])
 
-        cat_count = ApplianceCategory.query.filter_by(
-            id=category_id,
-            organisation_id=org_id,
-        ).count()
-        if cat_count == 0:
-            raise ResponseException(
-                message=serialization_error['not_found'].format(
-                    'Appliance Category'),
-                status_code=404,
-            )
+        self.validate_related_org_models(org_id,
+                                         parameter_ids=param_ids,
+                                         category_id=[category_id])
+        # self.validate_param_and_category_ids(org_id, param_ids, [category_id])
         params = set(validated_data['parameters'])
-        valid_parameters = Parameter.query.filter(
-            Parameter.id.in_(params)).count()
-        invalid_parameter_count = len(params) - valid_parameters
-
-        if invalid_parameter_count > 0:
-            raise ResponseException(
-                message=serialization_error['some_ids_not_found'].format(
-                    f'{invalid_parameter_count} parameters'))
-
         appliance_obj = Appliance(
             label=validated_data['label'],
             specs=validated_data['specs'],
@@ -65,8 +68,7 @@ class ApplianceView(BaseOrgView, BasePaginatedView):
             organisation_id=org_id,
             created_by_id=user_data['id'],
         )
-
-        appliance_obj.save()
+        appliance_obj.save(commit=False)
 
         bulk_appliance_param = [
             ApplianceParameter(

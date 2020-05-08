@@ -44,7 +44,7 @@ class Report(BaseSchema, AbstractSchemaWithTimeStampsMixin,
                 serialization_error['invalid_range'].format('Date Range'),
                 errors={
                     'endDate':
-                    serialization_error['f1_must_be_gt_f2'].format(
+                    serialization_error['f1_must_be_gte_f2'].format(
                         'end date', 'start date'),
                     'startDate':
                     serialization_error['f1_must_be_lt_f2'].format(

@@ -31,7 +31,6 @@ class TestCreateParameterEndpointWithoutValidation:
             'unitId': unit.id,
             'valueType': ValueTypeEnum.NUMERIC.name,
         }
-        # import pdb; pdb.set_trace()
         token = UserGenerator.generate_token(user)
 
         add_cookie_to_client(client, user, token)

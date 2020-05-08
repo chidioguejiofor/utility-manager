@@ -1,8 +1,8 @@
 serialization_error = {
     'required': "Missing data for required field.",
     'invalid_range': '{} is invalid',
-    'f1_must_be_gt_f2': 'Your {} must be more than or equal to {}',
-    'f1_must_be_lt_f2': 'Your {} must be less than or equal to {}',
+    'f1_must_be_gte_f2': '{} must be more than or equal to {}',
+    'f1_must_be_lt_f2': '{} must be less than or equal to {}',
     'pass_is_required': 'Password field is required',
     'alpha_numeric': 'Only letters and numbers are allowed here',
     'number_only': 'Only numbers are allowed here',
@@ -10,6 +10,7 @@ serialization_error = {
     'invalid_email': 'Not a valid email address.',
     'already_exists': 'The {} already exists',
     'invalid_field_data': "There are some data you provided that are invalid",
+    'not_found_fields': 'Some data you requested were not found',
     'min_length_error':
     'This field must be greater than or equal to {} characters',
     'max_length_error': 'This field must be less than {} characters',
@@ -86,7 +87,9 @@ model_operations = {
     'ids_not_found':
     'Some ids you specified were not found',
     'column_must_have_a_value':
-    'The "{}" column cannot be empty'
+    'The "{}" column cannot be empty',
+    'appliance_already_exists':
+    "Appliance with that 'label' already exists",
 }
 
 invitation_errors = {

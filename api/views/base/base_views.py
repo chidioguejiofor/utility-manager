@@ -9,6 +9,10 @@ from .decoratorators import Authentication, OrgViewDecorator
 from api.services.redis_util import RedisUtil
 from api.utils.constants import COOKIE_TOKEN_KEY, REDIS_TOKEN_HASH_KEY
 from api.utils.id_generator import IDGenerator
+from sqlalchemy import func
+from api.models import db, Organisation
+from api.utils.exceptions import ResponseException
+from api.utils.error_messages import serialization_error
 
 
 class classproperty(object):
@@ -38,6 +42,47 @@ class BaseOrgView(BaseView):
     def filter_get_method_query(self, query, *args, org_id, **kwargs):
         return query.filter((self.__model__.organisation_id == org_id)
                             | (self.__model__.organisation_id.is_(None)))
+
+
+class BaseValidateRelatedOrgModelMixin:
+    VALIDATE_RELATED_KWARGS = {}
+
+    def validate_related_org_models(self, org_id, **kwargs):
+        string_agg = func.string_agg
+        columns = [Organisation.id]
+        org_filter = Organisation.id == org_id
+        join_kwargs = []
+        for current_key, validator_dict in self.VALIDATE_RELATED_KWARGS.items(
+        ):
+            model = validator_dict['model']
+            model_filter = ((model.organisation_id == Organisation.id) &
+                            (model.id.in_(kwargs.get(current_key)))
+                            & org_filter)
+            join_kwargs.append({'model': model, 'model_filter': model_filter})
+            columns.append(string_agg(model.id.distinct(), ','))
+
+        validation_info = db.session.query(*columns)
+        for join_dict in join_kwargs:
+            validation_info = validation_info.join(join_dict['model'],
+                                                   join_dict['model_filter'],
+                                                   isouter=True)
+
+        validation_info = validation_info.filter(org_filter).group_by(
+            Organisation.id).one()
+        errors = {}
+        for index, current_key in enumerate(
+                self.VALIDATE_RELATED_KWARGS.keys()):
+            found_agg_value = validation_info[index + 1]
+
+            if not found_agg_value or len(found_agg_value.split(',')) != len(
+                    kwargs.get(current_key)):
+                errors[current_key] = self.VALIDATE_RELATED_KWARGS[
+                    current_key]['err_message']
+
+        if errors:
+            raise ResponseException(serialization_error['not_found_fields'],
+                                    404,
+                                    errors=errors)
 
 
 class BasePaginatedView(SearchFilterMixin, PaginatorMixin):

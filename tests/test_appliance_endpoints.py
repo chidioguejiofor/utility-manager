@@ -3,7 +3,7 @@ from tests.assertions import (add_cookie_to_client,
                               assert_user_not_in_organisation,
                               assert_unverified_user)
 from api.utils.success_messages import (CREATED, RETRIEVED)
-from api.utils.error_messages import serialization_error, authentication_errors
+from api.utils.error_messages import serialization_error, authentication_errors, model_operations
 from api.models import ApplianceCategory, db, Appliance, ApplianceParameter, Parameter
 from tests.mocks.user import UserGenerator
 from tests.mocks.organisation import OrganisationGenerator
@@ -27,7 +27,8 @@ def run_test_precondition(client, **kwargs):
     org = OrganisationGenerator.generate_model_obj(save=True)
     category_model = ApplianceCategoryGenerator.generate_model_obj(org.id,
                                                                    save=True)
-    parameter = ParameterGenerator.generate_model_obj(save=True)
+    parameter = ParameterGenerator.generate_model_obj(organisation_id=org.id,
+                                                      save=True)
     user = kwargs.get('user', org.creator)
     token = UserGenerator.generate_token(user)
     add_cookie_to_client(client, user, token)
@@ -47,7 +48,7 @@ class TestCreateApplianceEndpoints:
         }
 
     def test_appliance_should_be_created_when_user_is_an_admin_in_the_organisation(
-        self, init_db, client):
+            self, init_db, client):
         org, category_model, parameter = run_test_precondition(client)
         json_data = ApplianceGenerator.generate_api_input_data([parameter.id])
         response = client.post(CREATE_URL.format(org.id, category_model.id),
@@ -68,7 +69,7 @@ class TestCreateApplianceEndpoints:
             parameter_id=parameter.id, appliance_id=model.id).count() == 1
 
     def test_should_fail_when_the_appliance_already_exists(
-        self, client, init_db):
+            self, client, init_db):
         org, category_model, parameter = run_test_precondition(client)
         json_data = ApplianceGenerator.generate_api_input_data([parameter.id])
         response = client.post(CREATE_URL.format(org.id, category_model.id),
@@ -82,8 +83,8 @@ class TestCreateApplianceEndpoints:
                                content_type="application/json")
         assert response.status_code == 409
         response_body = json.loads(response.data)
-        assert response_body['message'] == serialization_error[
-            'exists_in_org'].format('Appliance')
+        assert response_body['message'] == model_operations[
+            'appliance_already_exists']
 
     def test_should_fail_when_the_body_is_empty(self, client, init_db):
         org, category_model, parameter = run_test_precondition(client)
@@ -97,7 +98,7 @@ class TestCreateApplianceEndpoints:
         assert len(response_body['errors']['parameters']) > 0
 
     def test_should_return_404_when_user_is_not_part_of_org(
-        self, init_db, client):
+            self, init_db, client):
         user = UserGenerator.generate_model_obj(save=True, verified=True)
         org, category_model, parameter = run_test_precondition(client,
                                                                user=user)
@@ -113,7 +114,7 @@ class TestCreateApplianceEndpoints:
         assert response_body['status'] == 'error'
 
     def test_should_fail_when_there_are_invalid_parameters_in_the_request(
-        self, init_db, client):
+            self, init_db, client):
         org, category_model, parameter = run_test_precondition(client)
         json_data = ApplianceGenerator.generate_api_input_data([parameter.id])
         json_data['parameters'].append('id1')
@@ -125,25 +126,30 @@ class TestCreateApplianceEndpoints:
         response_body = json.loads(response.data)
         assert response_body['status'] == 'error'
         assert response_body['message'] == serialization_error[
-            'some_ids_not_found'].format(f'2 parameters')
-        assert response.status_code == 400
+            'not_found_fields']
+        assert response_body['errors']['parameter_ids'] == serialization_error[
+            'not_found'].format('Some parameters')
+        assert response.status_code == 404
 
     def test_should_return_404_when_appliance_category_is_not_found(
-        self, init_db, client):
+            self, init_db, client):
         org, category_model, parameter = run_test_precondition(client)
         json_data = ApplianceGenerator.generate_api_input_data([parameter.id])
         response = client.post(CREATE_URL.format(org.id, 'abas'),
                                data=json.dumps(json_data),
                                content_type="application/json")
         response_body = json.loads(response.data)
+
         assert response_body['message'] == serialization_error[
+            'not_found_fields']
+        assert response_body['errors']['category_id'] == serialization_error[
             'not_found'].format('Appliance Category')
         assert response.status_code == 404
 
         assert response_body['status'] == 'error'
 
     def test_should_fail_when_the_user_is_not_an_admin(
-        self, init_db, client, add_user_to_organisation):
+            self, init_db, client, add_user_to_organisation):
         user = UserGenerator.generate_model_obj(save=True, verified=True)
         org, category_model, parameter = run_test_precondition(client,
                                                                user=user)
@@ -159,7 +165,7 @@ class TestCreateApplianceEndpoints:
         assert response_body['status'] == 'error'
 
     def test_should_fail_when_the_user_is_not_verified(
-        self, init_db, client, add_user_to_organisation):
+            self, init_db, client, add_user_to_organisation):
         user = UserGenerator.generate_model_obj(save=True, verified=False)
         org, category_model, parameter = run_test_precondition(client,
                                                                user=user)
@@ -178,7 +184,7 @@ class TestCreateApplianceEndpoints:
 
 class TestRetrieveApplianceParameterEndpoint:
     def test_permitted_user_should_be_able_to_retrieve_appliances(
-        self, init_db, client, saved_appliance_generator):
+            self, init_db, client, saved_appliance_generator):
         org, user_obj, numeric_params, text_params, appliance_model = saved_appliance_generator(
             'ENGINEER', 3, 3)
         token = UserGenerator.generate_token(user_obj)
@@ -210,7 +216,7 @@ class TestRetrieveApplianceParameterEndpoint:
             assert param_model.value_type.name == retrieved_param['valueType']
 
     def test_should_retrieve_only_params_that_match_the_given_id(
-        self, init_db, client, saved_appliance_generator):
+            self, init_db, client, saved_appliance_generator):
         #  Simulating generating 2 appliances with different parameters
         org, user_obj, numeric_params, text_params, appliance_model = saved_appliance_generator(
             'ENGINEER', 3, 3)
@@ -262,7 +268,7 @@ class TestRetrieveApplianceParameterEndpoint:
         assert_unverified_user(client, token, url, user=user_obj)
 
     def test_should_fail_when_the_user_is_not_part_of_org(
-        self, init_db, client, saved_appliance_generator):
+            self, init_db, client, saved_appliance_generator):
         org, _, numeric_params, text_params, appliance_model = saved_appliance_generator(
             'ENGINEER', 3, 3)
         user_obj = UserGenerator.generate_model_obj(verified=True, save=True)

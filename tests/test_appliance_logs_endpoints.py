@@ -1,5 +1,5 @@
 import json
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import pandas as pd
 from tests.assertions import (add_cookie_to_client,
                               assert_user_not_in_organisation,
@@ -187,6 +187,8 @@ class TestExportLogsToCSVFile:
         token = UserGenerator.generate_token(user_obj)
         add_cookie_to_client(client, user_obj, token)
         url = EXPORT_LOGS.format(org.id, appliance_model.id)
+        one_month_ago = datetime.utcnow() - timedelta(days=31)
+        url = f'{url}?start_date={one_month_ago}&end_date={datetime.utcnow()}'
         response = client.get(url)
         response_body = json.loads(response.data)
         assert response.status_code == 404
@@ -216,12 +218,13 @@ class TestExportLogsToCSVFile:
         token = UserGenerator.generate_token(user_obj)
         add_cookie_to_client(client, user_obj, token)
         url = EXPORT_LOGS.format(org.id, appliance_model.id)
+        one_month_ago = datetime.utcnow() - timedelta(days=31)
+        url = f'{url}?start_date={one_month_ago}&end_date={datetime.utcnow()}'
         response = client.get(url)
 
         #  Reading the CSV and converting to a pandas Dataframe
         string_io = StringIO(response.data.decode('utf-8'))
         df = pd.read_csv(string_io)
-        assert response.status_code == 200
         for param_name, param_args in param_values_by_name.items():
             param_value, param_symbol = param_args
             assert (df[param_name] == f'{param_value} {param_symbol}').all()
@@ -270,6 +273,39 @@ class TestExportLogsToCSVFile:
             assert (df[param_name] == f'{param_value} {param_symbol}').all()
         assert len(df) == 2
 
+    def test_should_return_error_when_start_date_is_more_than_end_date(
+            self, init_db, client, saved_appliance_generator,
+            saved_logs_generator):
+        org, user_obj, numeric_params, _, appliance_model = saved_appliance_generator(
+            'ENGINEER', num_of_numeric_units=4)
+        value_mapper = {}
+        param_values_by_name = {}
+
+        # Trying to simulate the user  logging different params
+        for index, param in enumerate(numeric_params):
+            param = Parameter.query.get(param.id)
+            param.name = f'Parameter {index}'
+            value_mapper[param.id] = index * 90
+            param_values_by_name[param.name] = [index * 90, param.unit.symbol]
+
+        db.session.commit()
+        saved_logs_generator(appliance_model,
+                             numeric_params,
+                             4,
+                             value_mapper=value_mapper)
+        token = UserGenerator.generate_token(user_obj)
+        add_cookie_to_client(client, user_obj, token)
+        url = EXPORT_LOGS.format(org.id, appliance_model.id)
+
+        # Although there are 4 logs I'm trying to export only the ones wiithin
+        url = f'{url}?end_date=2019-09-01&start_date=2020-01-01'
+        response = client.get(url)
+        assert response.status_code == 400
+        assert json.loads(
+            response.data
+        )['message'] == serialization_error['f1_must_be_gte_f2'].format(
+            'End date', 'Start Date')
+
 
 class TestRetrieveLogsEndpoint:
     def test_permitted_user_should_be_able_to_retrieve_logs(
@@ -312,15 +348,17 @@ class TestRetrieveLogsEndpoint:
             next_page=None,
             prev_page=None,
         )
-        # import pdb; pdb.set_trace()
         logs_id_mapper = {param.id: param for param in created_logs}
 
         for retrieved_log in response_body['data']:
             log_model = logs_id_mapper.get(retrieved_log['id'])
             assert log_model is not None
             for log_value in log_model.log_values:
-                assert str(value_mapper.get(
-                    log_value.parameter_id)) == log_value.value
+                text_or_number = value_mapper.get(log_value.parameter_id)
+                if log_value.text_value:
+                    assert text_or_number == log_value.text_value
+                else:
+                    assert text_or_number == log_value.numeric_value
 
     def test_should_search_only_by_retrieved_appliacne_id_when_the_appliance_id_search_is_specified(
             self, init_db, client, saved_appliance_generator,

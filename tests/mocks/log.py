@@ -1,6 +1,6 @@
 from .base import fake, BaseGenerator
 from api.models import Log, LogValue, ValueTypeEnum, Parameter, ApplianceParameter, Appliance
-from datetime import datetime, timedelta
+from datetime import datetime
 
 
 class LogGenerator(BaseGenerator):
@@ -36,14 +36,18 @@ class LogGenerator(BaseGenerator):
                     (Appliance.id == appliance.id)).all()
 
         for index, param in enumerate(parameters):
+
             if param.value_type == ValueTypeEnum.NUMERIC:
                 value = value_mapper.get(param.id, index * 50)
+                type_key = 'numeric_value'
             else:
                 value = value_mapper.get(param.id,
                                          'This is just a comment log')
+            value_key = f'{param.value_type.name.lower()}_value'
+            value_kwargs = {value_key: value}
             log_values.append(
                 LogValue(log_id=log_model.id,
                          parameter_id=param.id,
-                         value=value))
+                         **value_kwargs))
         log_values = LogValue.bulk_create(log_values, commit=save)
         return log_model, log_values

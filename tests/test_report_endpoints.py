@@ -133,8 +133,8 @@ class TestCreateReportEndpoint:
                                content_type="application/json")
         response_body = json.loads(response.data)
         assert response_body['message'] == serialization_error[
-            'invalid_field_data']
-        assert response_body['errors']['parameter'] == serialization_error[
+            'not_found_fields']
+        assert response_body['errors']['parameter_ids'] == serialization_error[
             'not_found'].format('Some parameters')
         assert 'appliance_ids' not in response_body['errors']
         assert response.status_code == 404
@@ -155,7 +155,7 @@ class TestCreateReportEndpoint:
                                content_type="application/json")
         response_body = json.loads(response.data)
         assert response_body['message'] == serialization_error[
-            'invalid_field_data']
+            'not_found_fields']
         assert response_body['errors']['appliance_ids'] == serialization_error[
             'not_found'].format('Some appliance you specifed')
         assert 'parameter' not in response_body['errors']
@@ -181,7 +181,7 @@ class TestCreateReportEndpoint:
         assert response_body['message'] == serialization_error[
             'invalid_range'].format('Date Range')
         assert response_body['errors']['endDate'] == serialization_error[
-            'f1_must_be_gt_f2'].format('end date', 'start date')
+            'f1_must_be_gte_f2'].format('end date', 'start date')
         assert response_body['errors']['startDate'] == serialization_error[
             'f1_must_be_lt_f2'].format('start date', 'end date')
         assert 'parameter' not in response_body['errors']

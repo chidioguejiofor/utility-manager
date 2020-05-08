@@ -12,7 +12,9 @@ class Log(BaseSchema, AbstractSchemaWithTimeStampsMixin,
                                dump_only=True)
 
     def retrieve_log_value(self, obj, **kwargs):
-        return {
-            log_value.parameter_id: log_value.value
-            for log_value in obj.log_values
-        }
+        final_dict = {}
+        for log_value in obj.log_values:
+            value = log_value.text_value if log_value.text_value else log_value.numeric_value
+            final_dict[log_value.parameter_id] = value
+
+        return final_dict

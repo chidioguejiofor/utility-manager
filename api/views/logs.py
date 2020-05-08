@@ -2,7 +2,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 from dateutil import parser, tz
 from sqlalchemy.sql import functions
-from sqlalchemy import cast, Date
+from sqlalchemy import cast, Date, String
 from flask import make_response
 from api.utils.exceptions import ResponseException
 from api.utils.error_messages import serialization_error
@@ -25,41 +25,41 @@ class ExportLogsView(BaseOrgView):
             seconds_offset = 0
 
         if seconds_offset > 12 * 60 * 60 or seconds_offset < -12 * 60 * 60:
-            seconds_offset = seconds_offset
+            seconds_offset = 0
         try:
             start_date = request.args.get('start_date', str(datetime.utcnow()))
             start_date = parser.parse(start_date)
             end_date = request.args.get('end_date',
                                         str(start_date - timedelta(days=30)))
             end_date = parser.parse(end_date)
-            if end_date > start_date or start_date - end_date > timedelta(
-                    days=366):
-                temp = start_date
-                start_date = end_date
-                end_date = temp
-        except Exception:
-            start_date = datetime.utcnow()
-            end_date = datetime.utcnow() - timedelta(days=30)
+            if end_date < start_date:
+                raise ResponseException(
+                    serialization_error['f1_must_be_gte_f2'].format(
+                        'End date', 'Start Date'), 400)
+
+        except ValueError:
+            raise ResponseException('Invalid date values', 400)
 
         return seconds_offset, start_date.date(), end_date.date()
 
     def get(self, org_id, user_data, appliance_id, membership, **kwargs):
         seconds_offset, start_date, end_date = self.parse_seconds_data()
         date_created_key = 'Date Created'
+        coalesce_log_value = functions.coalesce(
+            LogValue.text_value, cast(LogValue.numeric_value, String))
         log_data = db.session.query(
             Log.id, Log.created_at, Parameter.name,
-            functions.concat(LogValue.value, ' ', Unit.symbol)).join(
+            functions.concat(coalesce_log_value, ' ', Unit.symbol)).join(
                 LogValue,
                 (LogValue.log_id == Log.id) &
                 (Log.appliance_id == appliance_id) &
-                (cast(Log.created_at, Date) >= end_date) &
-                (cast(Log.created_at, Date) <= start_date),
+                (cast(Log.created_at, Date) >= start_date) &
+                (cast(Log.created_at, Date) <= end_date),
             ).join(Parameter, Parameter.id == LogValue.parameter_id).join(
                 Unit,
                 Parameter.unit_id == Unit.id,
                 isouter=True,
-            ).all()
-
+            ).filter(Log.organisation_id == org_id).all()
         if len(log_data) == 0:
             raise ResponseException(
                 serialization_error['not_found'].format(
@@ -139,11 +139,16 @@ class LogsView(BaseOrgView, BasePaginatedView):
             elif (param.value_type == ValueTypeEnum.NUMERIC
                   and self.validate_numeric_value(request_value) is False):
                 error_objs[param.id] = serialization_error['number_only']
+            elif param.value_type == ValueTypeEnum.NUMERIC:
+                log_values.append(
+                    LogValue(parameter_id=param.id,
+                             log_id=log_model.id,
+                             numeric_value=request_value))
             else:
                 log_values.append(
-                    LogValue(value=request_value,
-                             parameter_id=param.id,
-                             log_id=log_model.id))
+                    LogValue(parameter_id=param.id,
+                             log_id=log_model.id,
+                             text_value=request_value))
 
         if error_objs:
             raise ResponseException(

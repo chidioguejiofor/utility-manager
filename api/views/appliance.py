@@ -4,13 +4,13 @@ from api.utils.error_messages import serialization_error
 from .base import BaseOrgView, BasePaginatedView, BaseValidateRelatedOrgModelMixin
 from settings import org_endpoint
 from flask import request
-from api.models import db, Parameter, ApplianceParameter, ApplianceCategory, Appliance, Organisation
+from api.models import Parameter, ApplianceParameter, ApplianceCategory, Appliance, Organisation
 from api.schemas import ApplianceSchema
 from api.schemas import ParameterSchema
 from api.utils.success_messages import RETRIEVED, CREATED
 
 
-@org_endpoint('/appliance-category/<string:category_id>/appliances')
+@org_endpoint('/appliances')
 class ApplianceView(BaseOrgView, BasePaginatedView,
                     BaseValidateRelatedOrgModelMixin):
     __model__ = Appliance
@@ -19,14 +19,29 @@ class ApplianceView(BaseOrgView, BasePaginatedView,
 
     ALLOWED_ROLES = {'POST': ['MANAGER', 'OWNER', 'ADMIN']}
 
+    FILTER_QUERY_MAPPER = {
+        'category_id': 'appliance_category_id',
+        'category_name': 'appliance_category.name',
+    }
     # query settings
     SEARCH_FILTER_ARGS = {
         'label': {
             'filter_type': 'ilike'
         },
+        'category_id': {
+            'filter_type': 'eq'
+        },
+        'category_name': {
+            'filter_type': 'ilike'
+        }
     }
 
-    SORT_KWARGS = {'defaults': 'created_at', 'sort_fields': {'created_at'}}
+    SORT_KWARGS = {
+        'defaults': 'created_at',
+        'sort_fields': {'created_at', 'category_name', 'category_id'}
+    }
+
+    RETRIEVE_SUCCESS_MSG = RETRIEVED.format('Appliances')
 
     VALIDATE_RELATED_KWARGS = {
         "parameter_ids": {
@@ -35,31 +50,27 @@ class ApplianceView(BaseOrgView, BasePaginatedView,
             'err_message':
             serialization_error['not_found'].format('Some parameters')
         },
-        "category_id": {
+        "categoryId": {
             "model":
             ApplianceCategory,
             'err_message':
             serialization_error['not_found'].format('Appliance Category')
         },
     }
+    EAGER_LOADING_FIELDS = ['appliance_category']
 
-    def filter_get_method_query(self, query, *args, org_id, **kwargs):
-        return query.filter(
-            self.__model__.appliance_category_id == kwargs['category_id'])
-
-    def post(self, org_id, category_id, user_data, membership):
+    def post(self, org_id, user_data, membership):
         json_data = request.get_json()
         json_data = json_data if json_data else {}
         json_data['organisationId'] = org_id
         json_data['created_by_id'] = user_data['id']
-        json_data['appliance_category_id'] = category_id
         validated_data = ApplianceSchema().load(json_data)
+        category_id = json_data['categoryId']
         param_ids = set(validated_data['parameters'])
 
         self.validate_related_org_models(org_id,
                                          parameter_ids=param_ids,
-                                         category_id=[category_id])
-        # self.validate_param_and_category_ids(org_id, param_ids, [category_id])
+                                         categoryId=[category_id])
         params = set(validated_data['parameters'])
         appliance_obj = Appliance(
             label=validated_data['label'],

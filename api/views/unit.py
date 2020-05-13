@@ -7,7 +7,6 @@ from api.utils.exceptions import ResponseException
 from api.utils.success_messages import CREATED, RETRIEVED
 
 
-# /org/<string:org_id>/parameters
 @endpoint('/org/<string:org_id>/units')
 class UnitView(BaseOrgView, BasePaginatedView):
     __model__ = Unit

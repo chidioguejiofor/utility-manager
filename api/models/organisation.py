@@ -17,7 +17,6 @@ class Subscription(enum.Enum):
 class Organisation(BaseModel):
     __unique_violation_msg__ = serialization_error['already_exists'].format(
         'Website')
-    # __unique_violation_msg__ = serialization_error['already_exists'].format('Username or email')
     name = db.Column(db.String(120), nullable=False)
     display_name = db.Column(db.String(120), nullable=False)
     website = db.Column(db.String(), nullable=False)

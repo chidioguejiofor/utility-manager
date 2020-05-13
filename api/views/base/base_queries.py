@@ -4,6 +4,8 @@ import numpy as np
 
 
 class BaseFilterMixin:
+    FILTER_QUERY_MAPPER = {}
+
     def join_col(self, query, rel_class):
         if rel_class not in self._joined_fields:  # then do join only once
             query = query.join(rel_class)
@@ -20,6 +22,7 @@ class BaseFilterMixin:
 
 class SearchFilterMixin(BaseFilterMixin):
     __model__ = None
+    EAGER_LOADING_FIELDS = SEARCH_FILTER_ARGS = {}
 
     def search_model(self, query_params):
         filter_condition = []
@@ -28,9 +31,12 @@ class SearchFilterMixin(BaseFilterMixin):
             col_search_str = f'{str(model_column)}_search'
             search_value = query_params.get(col_search_str)
             col_filter = None
+            filter_type = self.SEARCH_FILTER_ARGS[model_column]['filter_type']
+            model_column = self.FILTER_QUERY_MAPPER.get(
+                model_column, model_column)
             if search_value is not None and len(search_value) > 0:
                 col_filter = self._retrieve_filter_binary_expression(
-                    model_column, search_value)
+                    model_column, search_value, filter_type)
                 rel_args = self.extract_rel_model_and_col(model_column)
 
                 if rel_args:
@@ -44,8 +50,8 @@ class SearchFilterMixin(BaseFilterMixin):
                 np.bitwise_or.reduce(filter_condition))
         return model_query
 
-    def _retrieve_filter_binary_expression(self, model_col, search_value):
-        filter_type = self.SEARCH_FILTER_ARGS[model_col]['filter_type']
+    def _retrieve_filter_binary_expression(self, model_col, search_value,
+                                           filter_type):
         rel_args = self.extract_rel_model_and_col(model_col)
         if rel_args:
             rel, rel_name, model_class_col, rel_class = rel_args
@@ -104,6 +110,8 @@ class PaginatorMixin(BaseFilterMixin):
                 field_name = order_by_str[1:]
                 asc_or_desc = order_by_str[0]
             if len(field_name) > 0 and field_name in sort_fields:
+                field_name = self.FILTER_QUERY_MAPPER.get(
+                    field_name, field_name)
                 rel_args = self.extract_rel_model_and_col(field_name)
                 if rel_args:
                     rel, rel_name, model_class_col, rel_class = rel_args

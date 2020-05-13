@@ -13,7 +13,7 @@ class ParameterView(BaseOrgView, BasePaginatedView):
     ALLOWED_ROLES = {'POST': ['MANAGER', 'OWNER']}
     PROTECTED_METHODS = ['POST', 'GET']
     RETRIEVE_SUCCESS_MSG = RETRIEVED.format('Parameter')
-
+    FILTER_QUERY_MAPPER = {'appliance_id': 'appliance_parameter.appliance_id'}
     SEARCH_FILTER_ARGS = {
         'name': {
             'filter_type': 'ilike'
@@ -21,6 +21,9 @@ class ParameterView(BaseOrgView, BasePaginatedView):
         'unit.name': {
             'filter_type': 'ilike'
         },
+        'appliance_id': {
+            'filter_type': 'eq',
+        }
     }
     SORT_KWARGS = {
         'defaults': 'created_at,name',
@@ -29,7 +32,7 @@ class ParameterView(BaseOrgView, BasePaginatedView):
     SCHEMA_EXCLUDE = [
         'created_by_id', 'updated_by', 'updated_by_id', 'organisation_id'
     ]
-    EAGER_LOADING_FIELDS = ['unit', 'created_by']
+    EAGER_LOADING_FIELDS = ['unit', 'created_by', 'appliance_parameter']
 
     def post(self, org_id, user_data, membership):
         exclude_fields = ['created_by', 'updated_by', 'organisation_id']

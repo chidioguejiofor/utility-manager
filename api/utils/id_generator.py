@@ -2,7 +2,7 @@ import time
 import numpy as np
 
 
-# Logic of this was copied from https://gist.github.com/risent/4cab3878d995bec7d1c2
+# Logic of this was inspired by https://gist.github.com/risent/4cab3878d995bec7d1c2
 class IDGenerator:
 
     PUSH_CHARS = ('-0123456789'

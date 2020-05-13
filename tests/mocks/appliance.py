@@ -8,8 +8,9 @@ class ApplianceGenerator(BaseGenerator):
     __model__ = Appliance
 
     @classmethod
-    def generate_api_input_data(cls, parameters):
+    def generate_api_input_data(cls, parameters, category_id=''):
         return {
+            'categoryId': category_id,
             'label':
             capitalize_each_word_in_sentence(fake.name()[:30].strip()),
             'specs': {
@@ -28,6 +29,7 @@ class ApplianceGenerator(BaseGenerator):
         } for parameter in parameters]
         appliance_obj = cls.generate_api_input_data(parameters)
         del appliance_obj['parameters']
+        del appliance_obj['categoryId']
         return {
             'id': appliance_id,
             'organisation_id': org_id,

@@ -1,6 +1,7 @@
 import pandas as pd
 from datetime import datetime, timedelta
 from dateutil import parser, tz
+from pytz import timezone
 from sqlalchemy.sql import functions
 from sqlalchemy import cast, Date, String
 from flask import make_response
@@ -29,9 +30,11 @@ class ExportLogsView(BaseOrgView):
         try:
             start_date = request.args.get('start_date', str(datetime.utcnow()))
             start_date = parser.parse(start_date)
+            start_date = start_date if start_date.tzinfo else timezone('UTC').localize(start_date)
             end_date = request.args.get('end_date',
                                         str(start_date - timedelta(days=30)))
             end_date = parser.parse(end_date)
+            end_date = end_date if end_date.tzinfo else timezone('UTC').localize(end_date)
             if end_date < start_date:
                 raise ResponseException(
                     serialization_error['f1_must_be_gte_f2'].format(

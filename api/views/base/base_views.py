@@ -34,12 +34,15 @@ class BaseView(Resource):
 
 class BaseOrgView(BaseView):
     ALLOWED_ROLES = {}
+    FILTER_GET_BY_ORG_ID = True
 
     @classproperty
     def method_decorators(self):
         return [OrgViewDecorator(self), Authentication(self)]
 
     def filter_get_method_query(self, query, *args, org_id, **kwargs):
+        if not self.FILTER_GET_BY_ORG_ID:
+            return query
         return query.filter((self.__model__.organisation_id == org_id)
                             | (self.__model__.organisation_id.is_(None)))
 

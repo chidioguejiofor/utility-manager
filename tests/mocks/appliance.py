@@ -8,8 +8,11 @@ class ApplianceGenerator(BaseGenerator):
     __model__ = Appliance
 
     @classmethod
-    def generate_api_input_data(cls, parameters, category_id=''):
-        return {
+    def generate_api_input_data(cls,
+                                parameters,
+                                category_id='',
+                                required_params=None):
+        data = {
             'categoryId': category_id,
             'label':
             capitalize_each_word_in_sentence(fake.name()[:30].strip()),
@@ -17,8 +20,13 @@ class ApplianceGenerator(BaseGenerator):
                 'powerRating': 4000,
                 'serialNumber': 'N-20110-888',
             },
-            'parameters': parameters
+            'parameters': parameters,
         }
+
+        if required_params:
+            data['requiredParameters'] = required_params if isinstance(
+                required_params, list) else []
+        return data
 
     @classmethod
     def generate_model_obj_dict(cls, org_id, parameters, **kwargs):
@@ -28,7 +36,8 @@ class ApplianceGenerator(BaseGenerator):
             'parameter_id': parameter.id
         } for parameter in parameters]
         appliance_obj = cls.generate_api_input_data(parameters)
-        del appliance_obj['parameters']
+        appliance_obj.pop('parameters', None)
+        appliance_obj.pop('requiredParameters', None)
         del appliance_obj['categoryId']
         return {
             'id': appliance_id,

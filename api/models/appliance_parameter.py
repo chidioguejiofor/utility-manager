@@ -12,6 +12,8 @@ class ApplianceParameter(BaseModel):
         db.ForeignKey('Parameter.id'),
         nullable=False,
     )
+
+    required = db.Column(db.Boolean(), nullable=False, default=False)
     appliance = db.relationship("Appliance",
                                 back_populates='appliance_parameter',
                                 lazy=True)

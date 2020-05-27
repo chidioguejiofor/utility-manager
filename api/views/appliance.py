@@ -1,12 +1,10 @@
-from sqlalchemy import func
 from api.utils.exceptions import ResponseException
 from api.utils.error_messages import serialization_error
 from .base import BaseOrgView, BasePaginatedView, BaseValidateRelatedOrgModelMixin
 from settings import org_endpoint
 from flask import request
-from api.models import Parameter, ApplianceParameter, ApplianceCategory, Appliance, Organisation
-from api.schemas import ApplianceSchema
-from api.schemas import ParameterSchema
+from api.models import Parameter, ApplianceParameter, ApplianceCategory, Appliance
+from api.schemas import ApplianceSchema, ApplianceParameterSchema
 from api.utils.success_messages import RETRIEVED, CREATED
 
 
@@ -67,7 +65,14 @@ class ApplianceView(BaseOrgView, BasePaginatedView,
         validated_data = ApplianceSchema().load(json_data)
         category_id = json_data['categoryId']
         param_ids = set(validated_data['parameters'])
-
+        required_param_ids = set(validated_data.get('required_parameters', []))
+        if len(required_param_ids - param_ids) > 0:
+            raise ResponseException(
+                serialization_error['invalid_field_data'],
+                errors={
+                    'requiredParameters':
+                    serialization_error['invalid_required_params']
+                })
         self.validate_related_org_models(org_id,
                                          parameter_ids=param_ids,
                                          categoryId=[category_id])
@@ -85,6 +90,7 @@ class ApplianceView(BaseOrgView, BasePaginatedView,
             ApplianceParameter(
                 parameter_id=param,
                 appliance_id=appliance_obj.id,
+                required=param in required_param_ids,
             ) for param in params
         ]
 
@@ -98,24 +104,27 @@ class ApplianceView(BaseOrgView, BasePaginatedView,
 
 @org_endpoint('/appliances/<string:appliance_id>/parameters')
 class ApplianceParamsView(BaseOrgView, BasePaginatedView):
-    __SCHEMA__ = ParameterSchema
-    __model__ = Parameter
+    __SCHEMA__ = ApplianceParameterSchema
+    __model__ = ApplianceParameter
+    FILTER_GET_BY_ORG_ID = False
     PROTECTED_METHODS = ['GET']
     ALLOWED_ROLES = {
         'GET': ['OWNER', 'ADMIN', 'ENGINEER'],
     }
 
+    # GET Method settings
+    FILTER_QUERY_MAPPER = {
+        'name': 'parameter.name',
+        'category_name': 'appliance_category.name',
+    }
     SORT_KWARGS = {
         'defaults': 'name',
         'sort_fields': {'name', 'created_at', 'updated_at'}
     }
 
     RETRIEVE_SUCCESS_MSG = RETRIEVED.format('Appliance Parameters')
-    EAGER_LOADING_FIELDS = ['unit']
-    SCHEMA_EXCLUDE = [
-        'organisation_id', 'editable', 'updated_by', 'created_by'
-    ]
+    EAGER_LOADING_FIELDS = ['parameter', 'parameter.unit']
 
     def filter_get_method_query(self, query, *args, org_id, appliance_id,
                                 **kwargs):
-        return Parameter.get_parameters_in_appliance(org_id, appliance_id)
+        return query.filter(ApplianceParameter.appliance_id == appliance_id)

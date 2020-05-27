@@ -2,7 +2,6 @@ from marshmallow import fields
 from .base import (AbstractSchemaWithTimeStampsMixin, BaseSchema, StringField,
                    AbstractUserActionMixin, ListField, IDField)
 from .appliance_category import ApplianceCategory
-from ..models import ApplianceCategory as ApplianceCategoryModel
 
 
 class Appliance(BaseSchema, AbstractSchemaWithTimeStampsMixin,
@@ -23,3 +22,6 @@ class Appliance(BaseSchema, AbstractSchemaWithTimeStampsMixin,
                         capitalize=True)
     specs = fields.Dict(required=True)
     parameters = ListField(IDField, min_length=1, required=True)
+    required_parameters = ListField(IDField,
+                                    min_length=1,
+                                    data_key='requiredParameters')

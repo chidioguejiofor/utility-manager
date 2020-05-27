@@ -1,18 +1,17 @@
-from .base import AbstractSchemaWithTimeStampsMixin, AlphanumericField, BaseSchema, StringField
+from .base import AbstractSchemaWithTimeStampsMixin, AbstractUserActionMixin, AlphanumericField, BaseSchema, StringField
 from marshmallow import fields, post_load
 from api.utils.error_messages import parameter_errors
 from api.utils.exceptions import ResponseException
 from marshmallow_enum import EnumField
 from ..models import Parameter as ParameterModel, ValueTypeEnum
-from .user import User
+from api.utils.constants import GENERIC_EXCLUDE_SCHEMA_FIELDS, GENERIC_EXCLUDE_USER_AUDIT_FIELDS
 from .unit import Unit
 import dateutil.parser
 
 
-class Parameter(AbstractSchemaWithTimeStampsMixin, BaseSchema):
+class Parameter(AbstractUserActionMixin, AbstractSchemaWithTimeStampsMixin,
+                BaseSchema):
     __model__ = ParameterModel
-    _excluded_user_fields = ['created_at', 'updated_at', 'verified']
-    _excluded_unit_fields = ['created_at', 'updated_at', 'organisation_id']
     name = AlphanumericField(allow_spaces=True, required=True, capitalize=True)
     created_by_id = StringField(load_only=True, data_key='createdById')
     updated_by_id = StringField(load_only=True, data_key='updated_by_id')
@@ -25,13 +24,9 @@ class Parameter(AbstractSchemaWithTimeStampsMixin, BaseSchema):
     organisation_id = StringField(data_key='organisationId', required=True)
     editable = fields.Function(lambda obj: bool(obj.organisation_id),
                                dump_only=True)
-    created_by = fields.Nested(User(exclude=_excluded_user_fields),
-                               dump_only=True,
-                               data_key='createdBy')
-    updated_by = fields.Nested(User(exclude=_excluded_user_fields),
-                               dump_only=True,
-                               data_key='updatedBy')
-    unit = fields.Nested(Unit(exclude=_excluded_unit_fields), dump_only=True)
+    unit = fields.Nested(Unit(exclude=GENERIC_EXCLUDE_SCHEMA_FIELDS +
+                              ['organisation_id']),
+                         dump_only=True)
 
     def validation_enum_value_type(self, validation):
         self._error_msg_generator(not validation,
@@ -100,3 +95,11 @@ class Parameter(AbstractSchemaWithTimeStampsMixin, BaseSchema):
         elif len(validation_str) > 0:
             self.validate_non_enum_value_type(value_type, validation_str)
         return super().create_objects(data, **kwargs)
+
+
+class ApplianceParameter(AbstractSchemaWithTimeStampsMixin, BaseSchema):
+    param_exclude = GENERIC_EXCLUDE_USER_AUDIT_FIELDS + [
+        'organisation_id', 'editable'
+    ]
+    required = fields.Boolean(dump_only=True)
+    parameter = fields.Nested(Parameter(exclude=param_exclude), dump_only=True)

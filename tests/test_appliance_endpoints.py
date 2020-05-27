@@ -58,6 +58,47 @@ class TestCreateApplianceEndpoints:
         assert ApplianceParameter.query.filter_by(
             parameter_id=parameter.id, appliance_id=model.id).count() == 1
 
+    def test_appliance_should_be_created_when_non_required_params_are_specified(
+            self, init_db, client):
+        org, category_model, parameter = run_test_precondition(client)
+        json_data = ApplianceGenerator.generate_api_input_data(
+            [parameter.id], category_model.id, required_params=[parameter.id])
+        response = client.post(URL.format(org.id),
+                               data=json.dumps(json_data),
+                               content_type="application/json")
+        assert response.status_code == 201
+        response_body = json.loads(response.data)
+        assert response_body['message'] == CREATED.format('Appliance')
+        assert 'data' in response_body
+        assert response_body['status'] == 'success'
+
+        model = Appliance.query.get(response_body['data']['id'])
+        assert model.label == json_data['label']
+        assert model.specs == json_data['specs']
+        assert model.created_by_id == org.creator.id
+        assert model.updated_by_id is None
+        assert ApplianceParameter.query.filter_by(parameter_id=parameter.id,
+                                                  appliance_id=model.id,
+                                                  required=True).count() == 1
+
+    def test_appliance_should_fail_when_an_invalid_id_is_specified_in_required_params(
+            self, init_db, client):
+        org, category_model, parameter = run_test_precondition(client)
+        json_data = ApplianceGenerator.generate_api_input_data(
+            [parameter.id],
+            category_model.id,
+            required_params=[parameter.id, 'invalid'])
+        response = client.post(URL.format(org.id),
+                               data=json.dumps(json_data),
+                               content_type="application/json")
+        assert response.status_code == 400
+        response_body = json.loads(response.data)
+        assert response_body['message'] == serialization_error[
+            'invalid_field_data']
+        assert response_body['errors'][
+            'requiredParameters'] == serialization_error[
+                'invalid_required_params']
+
     def test_should_fail_when_the_appliance_already_exists(
             self, client, init_db):
         org, category_model, parameter = run_test_precondition(client)
@@ -204,12 +245,14 @@ class TestRetrieveApplianceParameterEndpoint:
 
         param_id_mapper = {param.id: param for param in created_params}
 
-        for retrieved_param in response_body['data']:
+        for appliance_param in response_body['data']:
+            retrieved_param = appliance_param['parameter']
             param_model = param_id_mapper.get(retrieved_param['id'])
             assert param_model is not None
             assert param_model.name == retrieved_param['name']
             assert param_model.validation == retrieved_param['validation']
             assert param_model.value_type.name == retrieved_param['valueType']
+            assert appliance_param['required'] is False
 
     def test_should_retrieve_only_params_that_match_the_given_id(
             self, init_db, client, saved_appliance_generator):
@@ -245,12 +288,15 @@ class TestRetrieveApplianceParameterEndpoint:
 
         param_id_mapper = {param.id: param for param in created_params}
 
-        for retrieved_param in response_body['data']:
-            param_model = param_id_mapper.get(retrieved_param['id'])
+        for appliance_param in response_body['data']:
+            retrieved_parameter = appliance_param['parameter']
+            param_model = param_id_mapper.get(retrieved_parameter['id'])
             assert param_model is not None
-            assert param_model.name == retrieved_param['name']
-            assert param_model.validation == retrieved_param['validation']
-            assert param_model.value_type.name == retrieved_param['valueType']
+            assert param_model.name == retrieved_parameter['name']
+            assert param_model.validation == retrieved_parameter['validation']
+            assert param_model.value_type.name == retrieved_parameter[
+                'valueType']
+            assert appliance_param['required'] is False
 
     def test_should_fail_when_user_is_not_verified(self, init_db, client,
                                                    saved_appliance_generator):

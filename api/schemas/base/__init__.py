@@ -1,5 +1,6 @@
 from .custom_fields import *
 from marshmallow import Schema, post_load, EXCLUDE
+from api.utils.constants import EXCLUDE_USER_SCHEMA_FIELDS
 
 
 class BaseSchema(Schema):
@@ -34,10 +35,9 @@ class AbstractUserActionMixin:
     from ..user import User
     created_by_id = StringField(load_only=True)
     updated_by_id = StringField(load_only=True)
-    _excluded_user_fields = ['created_at', 'updated_at', 'verified']
-    created_by = fields.Nested(User(exclude=_excluded_user_fields),
+    created_by = fields.Nested(User(exclude=EXCLUDE_USER_SCHEMA_FIELDS),
                                dump_only=True,
                                data_key='createdBy')
-    updated_by = fields.Nested(User(exclude=_excluded_user_fields),
+    updated_by = fields.Nested(User(exclude=EXCLUDE_USER_SCHEMA_FIELDS),
                                dump_only=True,
                                data_key='updatedBy')

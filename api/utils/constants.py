@@ -16,3 +16,8 @@ SENTRY_IGNORE_ERRORS = [
     'marshmallow.exceptions.ValidationError',
     'jwt.exceptions.InvalidTokenError',
 ]
+GENERIC_EXCLUDE_SCHEMA_FIELDS = ['created_at', 'updated_at']
+GENERIC_EXCLUDE_USER_AUDIT_FIELDS = GENERIC_EXCLUDE_SCHEMA_FIELDS + [
+    'created_by', 'updated_by'
+]
+EXCLUDE_USER_SCHEMA_FIELDS = GENERIC_EXCLUDE_SCHEMA_FIELDS + ['verified']

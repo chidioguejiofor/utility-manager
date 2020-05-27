@@ -70,6 +70,8 @@ class PaginatorMixin(BaseFilterMixin):
     """
     Contains methods for paginating an output query.
     """
+    SORT_KWARGS = None
+
     def _sort_query(self, query, query_params):
         """Sorts the query based on query_params provided
 
@@ -99,6 +101,7 @@ class PaginatorMixin(BaseFilterMixin):
             flask_sqlalchemy.BaseQuery: a sorted query object
 
         """
+
         sort_fields = self.SORT_KWARGS['sort_fields']
         default_sort = self.SORT_KWARGS['defaults']
         order_by_list = []

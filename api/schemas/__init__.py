@@ -8,7 +8,7 @@ from .membership import (OrganisationMembership as
                          UserMembershipSchema, OrgAndMembershipSchema,
                          MembershipIDOnlySchema, OrgMembershipSchema)
 from .unit import Unit as UnitSchema
-from .parameter import Parameter as ParameterSchema
+from .parameter import Parameter as ParameterSchema, ApplianceParameter as ApplianceParameterSchema
 from .role import Role as RoleSchema
 from .invitation import Invitation as InvitationSchema, InvitationRequestSchema, InvitationRequestWithoutInvitesSchema
 from .appliance_category import ApplianceCategory as ApplianceCategorySchema

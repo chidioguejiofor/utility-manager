@@ -1,34 +1,58 @@
 serialization_error = {
-    'required': "Missing data for required field.",
-    'invalid_range': '{} is invalid',
-    'f1_must_be_gte_f2': '{} must be more than or equal to {}',
-    'f1_must_be_lt_f2': '{} must be less than or equal to {}',
-    'pass_is_required': 'Password field is required',
-    'alpha_numeric': 'Only letters and numbers are allowed here',
-    'number_only': 'Only numbers are allowed here',
-    'alpha_only': "Only Alphabets are allowed here",
-    'invalid_email': 'Not a valid email address.',
-    'already_exists': 'The {} already exists',
-    'invalid_field_data': "There are some data you provided that are invalid",
-    'not_found_fields': 'Some data you requested were not found',
+    'required':
+    "Missing data for required field.",
+    'invalid_range':
+    '{} is invalid',
+    'f1_must_be_gte_f2':
+    '{} must be more than or equal to {}',
+    'f1_must_be_lt_f2':
+    '{} must be less than or equal to {}',
+    'pass_is_required':
+    'Password field is required',
+    'alpha_numeric':
+    'Only letters and numbers are allowed here',
+    'number_only':
+    'Only numbers are allowed here',
+    'alpha_only':
+    "Only Alphabets are allowed here",
+    'invalid_email':
+    'Not a valid email address.',
+    'already_exists':
+    'The {} already exists',
+    'invalid_field_data':
+    "There are some data you provided that are invalid",
+    'not_found_fields':
+    'Some data you requested were not found',
     'min_length_error':
     'This field must be greater than or equal to {} characters',
-    'max_length_error': 'This field must be less than {} characters',
-    'login_failed': 'Invalid login Credentials',
-    'email_not_found': 'The email you specified was not found',
-    'already_verified': 'User has already been verified',
-    'invalid_url': '`redirectURL` field must be a valid URL',
-    'invalid_image': 'File is not a valid image',
-    'invalid_confirmation_link': "Link is expired",
+    'max_length_error':
+    'This field must be less than {} characters',
+    'login_failed':
+    'Invalid login Credentials',
+    'email_not_found':
+    'The email you specified was not found',
+    'already_verified':
+    'User has already been verified',
+    'invalid_url':
+    '`redirectURL` field must be a valid URL',
+    'invalid_image':
+    'File is not a valid image',
+    'invalid_confirmation_link':
+    "Link is expired",
     'not_an_admin':
     'You must a Manager or Owner in at least one organisation to do this',
-    'not_found': '{} was not found',
+    'not_found':
+    '{} was not found',
     'already_added':
     'Some {}(s) you specified, have already been added this {}',
-    'exists_in_org': "A {} with those values has already been created",
+    'exists_in_org':
+    "A {} with those values has already been created",
     'empty_update_data':
     "You did not specify any data you would like to update",
-    'some_ids_not_found': "There are {} ids you specified that were not found"
+    'some_ids_not_found':
+    "There are {} ids you specified that were not found",
+    'invalid_required_params':
+    'The required parameters must be a subset of specified parameters'
 }
 
 authentication_errors = {

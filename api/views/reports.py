@@ -1,19 +1,42 @@
-from sqlalchemy import func
 from settings import org_endpoint, db
 from api.utils.error_messages import serialization_error
-from api.utils.exceptions import ResponseException
 from flask import request
-from .base import BaseOrgView, BaseValidateRelatedOrgModelMixin
-from api.utils.success_messages import CREATED
-from api.schemas import ReportSchema
-from api.models import Report, ReportSection, ReportColumn, Appliance, Organisation, Parameter
+from .base import BaseOrgView, BaseValidateRelatedOrgModelMixin, BasePaginatedView
+from api.utils.success_messages import CREATED, RETRIEVED
+from api.schemas import ReportSchema, ReportSectionSchema, ReportColumnSchema
+from api.models import Report, ReportSection, ReportColumn, Appliance, Parameter
+from api.utils.exceptions import ResponseException
 
 
 @org_endpoint('/reports')
-class ReportsView(BaseOrgView, BaseValidateRelatedOrgModelMixin):
-    PROTECTED_METHODS = ['POST']
-    ALLOWED_ROLES = {'POST': ['ENGINEER', 'ADMIN', 'OWNER']}
+class ReportsView(BaseOrgView, BasePaginatedView,
+                  BaseValidateRelatedOrgModelMixin):
+    __model__ = Report
+    __SCHEMA__ = ReportSchema
+    PROTECTED_METHODS = ['POST', 'GET']
+    ALLOWED_ROLES = {
+        'POST': ['ENGINEER', 'ADMIN', 'OWNER'],
+        'GET': ['ENGINEER', 'ADMIN', 'OWNER'],
+    }
 
+    # GET method settings
+    SEARCH_FILTER_ARGS = {
+        'name': {
+            'filter_type': 'ilike'
+        },
+    }
+
+    SORT_KWARGS = {
+        'defaults': '-created_at,start_date',
+        'sort_fields': {'created_at', 'name'}
+    }
+
+    EAGER_LOADING_FIELDS = ['created_by', 'updated_by']
+
+    SCHEMA_EXCLUDE = ['sections']
+    RETRIEVE_SUCCESS_MSG = RETRIEVED.format('Reports')
+
+    # Validation Settings
     VALIDATE_RELATED_KWARGS = {
         "parameter_ids": {
             'model':
@@ -69,3 +92,56 @@ class ReportsView(BaseOrgView, BaseValidateRelatedOrgModelMixin):
         report_dict = ReportSchema().dump_success_data(
             report_model, CREATED.format('Report'))
         return report_dict, 201
+
+
+@org_endpoint('/reports/<string:report_id>/sections')
+class ReportSectionView(BaseOrgView, BasePaginatedView):
+    __model__ = ReportSection
+    __SCHEMA__ = ReportSectionSchema
+    PROTECTED_METHODS = ['GET']
+    ALLOWED_ROLES = {
+        'GET': ['ENGINEER', 'ADMIN', 'OWNER'],
+    }
+
+    # GET method settings
+    SEARCH_FILTER_ARGS = {
+        'name': {
+            'filter_type': 'ilike'
+        },
+    }
+    SCHEMA_EXCLUDE = ['columns']
+    SORT_KWARGS = {
+        'defaults': '-created_at',
+        'sort_fields': {'created_at', 'name'}
+    }
+
+    RETRIEVE_SUCCESS_MSG = RETRIEVED.format('Report Section')
+
+    def filter_get_method_query(self, query, *args, org_id, report_id,
+                                **kwargs):
+        return query.filter(ReportSection.report_id == report_id, ).join(
+            Report,
+            (Report.id == report_id) & (Report.organisation_id == org_id))
+
+
+@org_endpoint('/reports/<string:report_id>/sections/<string:section_id>')
+class ReportColumnView(BaseOrgView):
+    PROTECTED_METHODS = ['GET']
+    ALLOWED_ROLES = {
+        'GET': ['ENGINEER', 'ADMIN', 'OWNER'],
+    }
+
+    @staticmethod
+    def get(report_id, org_id, section_id, **kwargs):
+        section = ReportSection.eager(
+            'columns', 'columns.parameter', 'columns.parameter.unit').filter(
+                ReportSection.id == section_id).join(
+                    Report, (Report.id == report_id) &
+                    (Report.organisation_id == org_id)).first()
+        if not section:
+            raise ResponseException(
+                serialization_error['not_found'].format('Report Section'), 404)
+        schema = ReportSectionSchema()
+
+        return schema.dump_success_data(section,
+                                        RETRIEVED.format('Report Section'))

@@ -1,43 +1,16 @@
 import json
-from api.models import Report, ReportSection, ReportColumn
+from api.models import (Report, ReportSection, ReportColumn, ValueTypeEnum, db,
+                        Parameter, AggregationType)
 
 from api.utils.error_messages import serialization_error, parameter_errors, authentication_errors
 from api.utils.success_messages import CREATED, RETRIEVED
-from .mocks.user import UserGenerator
 from .assertions import add_cookie_to_client, assert_user_does_not_have_permission, assert_successful_response
+from .mocks.report import ReportGenerator, ReportColumnGenerator, ReportSectionGenerator
+from .mocks.user import UserGenerator
 
 REPORT_URL = '/api/org/{}/reports'
-
-
-class ReportGenerator:
-    @staticmethod
-    def generate_api_data(sections, **kwargs):
-        return {
-            "name": kwargs.get('name', "Report for 2020 for Generator 1"),
-            "startDate": kwargs.get('start_date', "2019-01-01"),
-            "endDate": kwargs.get('end_date', "2019-02-01"),
-            "sections": sections
-        }
-
-
-class ReportSectionGenerator:
-    @staticmethod
-    def generate_api_data(appliance_id, columns, **kwargs):
-        return {
-            "applianceId": appliance_id,
-            "name": kwargs.get('name', "Stats for Energy Consumed"),
-            "columns": columns
-        }
-
-
-class ReportColumnGenerator:
-    @staticmethod
-    def generate_api_data(parameter_id, **kwargs):
-        return {
-            "parameterId": parameter_id,
-            "aggregationType": kwargs.get('aggregation_type', "AVERAGE"),
-            "aggregateByColumn": kwargs.get('aggregate_by_column', False),
-        }
+REPORT_SECTION_URL = REPORT_URL + '/{}/sections'
+SINGLE_REPORT_SECTION_URL = REPORT_SECTION_URL + '/{}'
 
 
 class TestCreateReportEndpoint:
@@ -186,3 +159,120 @@ class TestCreateReportEndpoint:
             'f1_must_be_lt_f2'].format('start date', 'end date')
         assert 'parameter' not in response_body['errors']
         assert response.status_code == 400
+
+
+class TestRetrieveReportEndpoint:
+    def run_precondition(self,
+                         *,
+                         appliance,
+                         numeric_params,
+                         org,
+                         user_obj,
+                         report_name,
+                         param_names=None):
+        numeric_params = Parameter.query.filter(
+            Parameter.id.in_([param.id for param in numeric_params])).all()
+        report = ReportGenerator.generate_model_obj(
+            organisation_id=org.id,
+            name=report_name,
+            created_by_id=user_obj.id,
+        )
+        report.save()
+        report_section = ReportSectionGenerator.generate_model_obj(
+            report_id=report.id,
+            appliance_id=appliance.id,
+            name='Appliance Section')
+        report_section.save()
+        columns = []
+        default_param_names = [
+            f'Parameter {index + 1}'
+            for index, param in enumerate(numeric_params)
+        ]
+        param_names = param_names if param_names else default_param_names
+
+        for index, param in enumerate(numeric_params):
+            param.name = param_names[index]
+            columns.append(
+                ReportColumnGenerator.generate_model_obj(
+                    report_section_id=report_section.id,
+                    parameter_id=param.id,
+                    aggregation_type=AggregationType.AVERAGE,
+                    aggregate_by_column=True,
+                ))
+        db.session.commit()
+        ReportColumn.bulk_create(columns)
+        return report, report_section
+
+    def test_should_retrieve_paginated_report_sections(
+            self, init_db, client, saved_appliance_generator):
+        org, user_obj, numeric_params, _, appliance = saved_appliance_generator(
+            user_role='ENGINEER', num_of_numeric_units=4)
+        report, report_section = self.run_precondition(
+            appliance=appliance,
+            numeric_params=numeric_params,
+            org=org,
+            user_obj=user_obj,
+            report_name='Generator I')
+
+        url = REPORT_SECTION_URL.format(org.id, report.id)
+        token = UserGenerator.generate_token(user_obj)
+        add_cookie_to_client(client, user_obj, token)
+        response = client.get(url)
+        response_body = json.loads(response.data)
+        assert response_body['data'][0]['id'] == report_section.id
+        assert response_body['data'][0][
+            'applianceId'] == report_section.appliance_id
+        assert response_body['data'][0]['name'] == report_section.name
+        assert response.status_code == 200
+
+    def test_should_retrieve_columns_properly_when_retrieving_report_section(
+            self, init_db, client, saved_appliance_generator):
+        org, user_obj, numeric_params, _, appliance = saved_appliance_generator(
+            user_role='ENGINEER', num_of_numeric_units=4)
+        param_names = ['Param One', 'Param Two', 'Param Three', 'Param Four']
+        report, report_section = self.run_precondition(
+            appliance=appliance,
+            numeric_params=numeric_params,
+            org=org,
+            user_obj=user_obj,
+            report_name='Generator I',
+            param_names=param_names)
+
+        url = SINGLE_REPORT_SECTION_URL.format(org.id, report.id,
+                                               report_section.id)
+        token = UserGenerator.generate_token(user_obj)
+        add_cookie_to_client(client, user_obj, token)
+        response = client.get(url)
+        response_body = json.loads(response.data)
+        assert response_body['data']['id'] == report_section.id
+        assert response_body['data']['name'] == report_section.name
+        assert response_body['data']['applianceId'] == appliance.id
+        assert response_body['data']['columns'][0]['parameter'][
+            'name'] in param_names
+        assert response_body['data']['columns'][0]['parameter'][
+            'valueType'] == 'NUMERIC'
+        assert response.status_code == 200
+
+    def test_should_return_404_when_section_id_is_not_found(
+            self, init_db, client, saved_appliance_generator):
+        org, user_obj, numeric_params, _, appliance = saved_appliance_generator(
+            user_role='ENGINEER', num_of_numeric_units=4)
+        param_names = ['Param One', 'Param Two', 'Param Three', 'Param Four']
+        report, report_section = self.run_precondition(
+            appliance=appliance,
+            numeric_params=numeric_params,
+            org=org,
+            user_obj=user_obj,
+            report_name='Generator I',
+            param_names=param_names)
+
+        url = SINGLE_REPORT_SECTION_URL.format(org.id, report.id,
+                                               'missing-section-id')
+        token = UserGenerator.generate_token(user_obj)
+        add_cookie_to_client(client, user_obj, token)
+        response = client.get(url)
+        response_body = json.loads(response.data)
+        assert response_body['message'] == serialization_error[
+            'not_found'].format('Report Section')
+
+        assert response.status_code == 404

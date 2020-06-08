@@ -15,6 +15,9 @@ class Report(OrgBaseModel, UserActionBase):
     name = db.Column(db.String(), nullable=False)
     start_date = db.Column(db.Date, nullable=True)
     end_date = db.Column(db.Date, nullable=True)
+    sections = db.relationship("ReportSection",
+                               back_populates='report',
+                               lazy=True)
 
 
 class ReportSection(BaseModel):
@@ -25,6 +28,10 @@ class ReportSection(BaseModel):
     appliance_id = db.Column(db.String(),
                              db.ForeignKey('Appliance.id', ondelete='CASCADE'),
                              nullable=False)
+    columns = db.relationship("ReportColumn",
+                              back_populates='report_section',
+                              lazy=True)
+    report = db.relationship("Report", back_populates='sections', lazy=True)
 
 
 class ReportColumn(BaseModel):
@@ -47,3 +54,8 @@ class ReportColumn(BaseModel):
         nullable=False,
         default=False,
     )
+
+    report_section = db.relationship("ReportSection",
+                                     back_populates='columns',
+                                     lazy=True)
+    parameter = db.relationship("Parameter", lazy=True)

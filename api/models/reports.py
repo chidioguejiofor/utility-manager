@@ -1,6 +1,7 @@
 import enum
 from settings import db
 from .base import OrgBaseModel, BaseModel, UserActionBase
+from api.utils.constants import ID_FIELD_LENGTH
 
 
 class AggregationType(enum.Enum):
@@ -35,15 +36,6 @@ class ReportSection(BaseModel):
 
 
 class ReportColumn(BaseModel):
-    report_section_id = db.Column(db.String(),
-                                  db.ForeignKey('ReportSection.id',
-                                                ondelete='CASCADE'),
-                                  nullable=False)
-    formula_id = db.Column(db.String(), nullable=True)
-    parameter_id = db.Column(
-        db.String(22),
-        db.ForeignKey('Parameter.id', ondelete='CASCADE'),
-    )
     aggregation_type = db.Column(
         db.Enum(AggregationType, name='aggregation_type_enum'),
         nullable=False,
@@ -54,6 +46,23 @@ class ReportColumn(BaseModel):
         nullable=False,
         default=False,
     )
+
+    # Foreign Keys
+    report_section_id = db.Column(db.String(ID_FIELD_LENGTH),
+                                  db.ForeignKey('ReportSection.id',
+                                                ondelete='CASCADE'),
+                                  nullable=False)
+    formula_id = db.Column(db.String(ID_FIELD_LENGTH),
+                           db.ForeignKey('Formula.id',
+                                         ondelete='CASCADE',
+                                         name='report_column_formula_fk'),
+                           nullable=True)
+    parameter_id = db.Column(
+        db.String(ID_FIELD_LENGTH),
+        db.ForeignKey('Parameter.id', ondelete='CASCADE'),
+    )
+
+    # Relationships
 
     report_section = db.relationship("ReportSection",
                                      back_populates='columns',

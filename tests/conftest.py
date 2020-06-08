@@ -87,6 +87,14 @@ def saved_org_and_user_generator(unit_objs):
 
 
 @pytest.fixture(scope='session')
+def saved_report_generator():
+    def create_and_return_report(param_names):
+        return {}
+
+    return create_and_return_report
+
+
+@pytest.fixture(scope='session')
 def saved_appliance_generator():
     def create_and_return_mock_appliances(
         user_role=None,

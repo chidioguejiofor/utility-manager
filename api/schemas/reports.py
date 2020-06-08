@@ -5,16 +5,26 @@ from marshmallow_enum import EnumField
 from .base import (AbstractSchemaWithTimeStampsMixin, BaseSchema, StringField,
                    AbstractUserActionMixin, ListField, IDField)
 from api.utils.error_messages import serialization_error
+from .parameter import Parameter
+from api.utils.constants import GENERIC_EXCLUDE_USER_AUDIT_FIELDS
 
 
 class ReportColumn(BaseSchema):
-    parameter_id = IDField(required=True, data_key='parameterId')
+    parameter_id = IDField(required=True,
+                           data_key='parameterId',
+                           load_only=True)
     aggregation_type = EnumField(enum=AggregationType,
                                  data_key='aggregationType',
                                  by_value=False,
                                  required=True)
     aggregate_by_column = fields.Boolean(required=True,
                                          data_key='aggregateByColumn')
+
+    _param_exclude_fields = GENERIC_EXCLUDE_USER_AUDIT_FIELDS + [
+        'organisation_id'
+    ]
+    parameter = fields.Nested(Parameter(exclude=_param_exclude_fields),
+                              dump_only=True)
 
 
 class ReportSection(BaseSchema):

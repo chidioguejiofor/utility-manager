@@ -48,19 +48,70 @@ class BaseOrgView(BaseView):
 
 
 class BaseValidateRelatedOrgModelMixin:
+    """
+    This is a base class that abstract the validation of ids that are in the specified
+    organisation in one query as oppesed to making multiple db calls.
+
+    It can be controlled in the VALIDATE_RELATED_KWARGS settings dict that has the following structure:
+
+    VALIDATE_RELATED_KWARGS = {
+        "key1": {
+            'model': "This is the model from api.models",
+            'err_message': "The error message",
+            'org_is_nullable': "Optional boolean field that is False by default"
+        },
+        ...other keys
+    }
+
+    >>> from api.models import Parameter, Unit
+    >>> VALIDATE_RELATED_KWARGS = {
+    ...         "parameterIds": {
+    ...             'model': Parameter,
+    ...             'err_message': "Missing parameter",
+    ...         },
+    ...         "unitId": {
+    ...             'model': Unit,
+    ...             'err_message': "Missing parameter",
+    ...             'org_is_nullable': True,
+    ...         },
+    ...     }
+
+    Now a call to validate_related_org_models would look like so
+
+    >>> validate_related_org_models(
+    ...        'your-org-id', parameterIds=['param1','param2'], unitId=['unitId1']
+    ...)
+
+
+    Note that you could also do some more validation by extending the validate_more_model_fileds
+    method which requests a
+    """
     VALIDATE_RELATED_KWARGS = {}
+    # This has the following structure
+
+    @staticmethod
+    def validate_more_model_fields(current_key, model, model_filter):
+        return model_filter
 
     def validate_related_org_models(self, org_id, **kwargs):
         string_agg = func.string_agg
         columns = [Organisation.id]
         org_filter = Organisation.id == org_id
         join_kwargs = []
-        for current_key, validator_dict in self.VALIDATE_RELATED_KWARGS.items(
-        ):
+        for current_key, validator_dict in \
+                self.VALIDATE_RELATED_KWARGS.items():
+
             model = validator_dict['model']
-            model_filter = ((model.organisation_id == Organisation.id) &
-                            (model.id.in_(kwargs.get(current_key)))
-                            & org_filter)
+
+            model_org_filter = model.organisation_id == Organisation.id
+            if validator_dict.get('org_is_nullable'):
+                model_org_filter = (model_org_filter) | (model.organisation_id
+                                                         == None)
+
+            model_filter = ((model_org_filter) &
+                            (model.id.in_(kwargs[current_key])))
+            model_filter = self.validate_more_model_fields(
+                current_key, model, model_filter)
             join_kwargs.append({'model': model, 'model_filter': model_filter})
             columns.append(string_agg(model.id.distinct(), ','))
 
@@ -75,13 +126,20 @@ class BaseValidateRelatedOrgModelMixin:
         errors = {}
         for index, current_key in enumerate(
                 self.VALIDATE_RELATED_KWARGS.keys()):
-            found_agg_value = validation_info[index + 1]
+            found_agg_value = ''
+            if validation_info[index + 1]:
+                found_agg_value = validation_info[index + 1]
 
-            if not found_agg_value or len(found_agg_value.split(',')) != len(
-                    kwargs.get(current_key)):
-                errors[current_key] = self.VALIDATE_RELATED_KWARGS[
-                    current_key]['err_message']
-
+            found_agg_value = set(found_agg_value.split(','))
+            inputted_set_values = set(kwargs[current_key])
+            invalid_ids = inputted_set_values.difference(found_agg_value)
+            if len(invalid_ids) > 0:
+                errors[current_key] = {
+                    'message':
+                    self.VALIDATE_RELATED_KWARGS[current_key]['err_message'],
+                    'invalidValues':
+                    list(invalid_ids),
+                }
         if errors:
             raise ResponseException(serialization_error['not_found_fields'],
                                     404,

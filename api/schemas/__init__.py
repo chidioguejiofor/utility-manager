@@ -16,3 +16,5 @@ from .appliance import Appliance as ApplianceSchema
 from .log import Log as LogSchema
 from .reports import (ReportSection as ReportSectionSchema, Report as
                       ReportSchema, ReportColumn as ReportColumnSchema)
+from .formula import (FormulaToken as FormulaTokenSchema, Formula as
+                      FormulaSchema)

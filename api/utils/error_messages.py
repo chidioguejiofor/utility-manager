@@ -126,3 +126,12 @@ invitation_errors = {
     'email_already_in_org':
     "This user is already a member of your organisation"
 }
+
+formula_errors = {
+    'missing_opening_bracket':
+    'A closing bracket is missing a corresponding opening bracket',
+    'awkward_value': 'You inserted an awkward value in position {}',
+    'math_operation_at_end': 'A math operator cannot end a formula',
+    'missing_closing_bracket': 'Some brackets were not closed',
+    'required_field_for_type': 'is required when token type is {}'
+}

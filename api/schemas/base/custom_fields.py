@@ -95,7 +95,7 @@ class RegexField(StringField):
 
 
 class AlphanumericField(RegexField):
-    def __init__(self, allow_spaces=False, *args, **kwargs):
+    def __init__(self, allow_spaces=True, *args, **kwargs):
         regex = '^[A-Za-z0-9]+$'
 
         if allow_spaces:
@@ -106,21 +106,16 @@ class AlphanumericField(RegexField):
                          **kwargs)
 
 
-class AlphaOnlyField(StringField):
-    def __init__(self, *args, **kwargs):
-        validations = kwargs.get('validate', [])
-        validator = self._get_alpha_validator()
-        validations = validations + validator
-        super().__init__(*args, validate=validations, **kwargs)
+class AlphaOnlyField(RegexField):
+    def __init__(self, allow_spaces=True, *args, **kwargs):
+        regex = '^[A-Za-z]+$'
 
-    @staticmethod
-    def _get_alpha_validator():
-        def _validator(data):
-            if not data.strip().isalpha():
-                raise ValidationError(
-                    message=serialization_error['alpha_only'])
-
-        return [_validator]
+        if allow_spaces:
+            regex = '^[A-Za-z]+[A-Za-z\\s]+$'
+        super().__init__(regex=regex,
+                         regex_message=serialization_error['alpha_only'],
+                         *args,
+                         **kwargs)
 
 
 class ImageField(fields.Raw):
@@ -143,10 +138,10 @@ class ImageField(fields.Raw):
 
 class ListField(fields.List):
     def __init__(
-            self,
-            *args,
-            min_length=1,
-            **kwargs,
+        self,
+        *args,
+        min_length=1,
+        **kwargs,
     ):
         validate = (kwargs.get('validate', []) +
                     FieldValidator._get_min_length_validator(min_length))

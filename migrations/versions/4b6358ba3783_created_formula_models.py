@@ -1,8 +1,8 @@
 """Created formula models
 
-Revision ID: b518a58f7d6e
+Revision ID: 4b6358ba3783
 Revises: c1fcdbef301c
-Create Date: 2020-06-08 13:05:03.605568
+Create Date: 2020-06-09 12:45:16.277331
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'b518a58f7d6e'
+revision = '4b6358ba3783'
 down_revision = 'c1fcdbef301c'
 branch_labels = None
 depends_on = None
@@ -46,7 +46,9 @@ def upgrade():
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('position', sa.Integer(), nullable=False),
     sa.Column('type', sa.Enum('CONSTANT', 'PARAMETER', 'SYMBOL', 'FORMULA', name='token_type_enum'), nullable=False),
-    sa.Column('value_from', sa.Enum('PREV', 'CURRENT', name='token_value_from_enum'), nullable=False),
+    sa.Column('value_from', sa.Enum('PREV', 'CURRENT', name='token_value_from_enum'), nullable=True),
+    sa.Column('symbol', sa.Enum('MULTIPLY', 'SUBTRACT', 'DIVISION', 'ADDITION', 'OPEN_BRACKET', 'CLOSE_BRACKET', name='math_symbol_enum'), nullable=True),
+    sa.Column('constant', sa.Float(precision=2), nullable=True),
     sa.Column('parent_id', sa.String(length=21), nullable=False),
     sa.Column('formula_id', sa.String(length=21), nullable=True),
     sa.Column('parameter_id', sa.String(length=21), nullable=True),
@@ -87,6 +89,8 @@ def downgrade():
     op.drop_table('FormulaToken')
     op.drop_table('Formula')
     op.drop_table('DateAggregator')
+
     op.execute('DROP TYPE token_type_enum')
     op.execute('DROP TYPE token_value_from_enum')
+    op.execute('DROP TYPE math_symbol_enum')
     # ### end Alembic commands ###

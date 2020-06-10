@@ -105,10 +105,13 @@ class TestCreateReportEndpoint:
                                data=json.dumps(json_data),
                                content_type="application/json")
         response_body = json.loads(response.data)
+        parameter_id_errors = response_body['errors']['parameter_ids']
         assert response_body['message'] == serialization_error[
             'not_found_fields']
-        assert response_body['errors']['parameter_ids'] == serialization_error[
+        assert parameter_id_errors['message'] == serialization_error[
             'not_found'].format('Some parameters')
+        assert set(parameter_id_errors['invalidValues']) == set(
+            ['id1', 'id2', 'id3'])
         assert 'appliance_ids' not in response_body['errors']
         assert response.status_code == 404
 
@@ -117,9 +120,10 @@ class TestCreateReportEndpoint:
         org, user_obj, numeric_params, _, appliance = saved_appliance_generator(
             user_role='ENGINEER', num_of_numeric_units=4)
         report_section_name = 'Section One Name'
+        invalid_appliance_id = 'applianceId'
         section_mapper = {appliance.id: {'name': report_section_name}}
         json_data = self.generate_json_data(
-            numeric_params, ['applianceId'],
+            numeric_params, [invalid_appliance_id],
             appliance_section_mapper=section_mapper)
         url = REPORT_URL.format(org.id)
         add_cookie_to_client(client, user=user_obj)
@@ -127,10 +131,12 @@ class TestCreateReportEndpoint:
                                data=json.dumps(json_data),
                                content_type="application/json")
         response_body = json.loads(response.data)
+        appliance_ids_errror = response_body['errors']['appliance_ids']
         assert response_body['message'] == serialization_error[
             'not_found_fields']
-        assert response_body['errors']['appliance_ids'] == serialization_error[
+        assert appliance_ids_errror['message'] == serialization_error[
             'not_found'].format('Some appliance you specifed')
+        assert appliance_ids_errror['invalidValues'] == [invalid_appliance_id]
         assert 'parameter' not in response_body['errors']
         assert response.status_code == 404
 

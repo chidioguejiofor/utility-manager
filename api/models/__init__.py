@@ -13,4 +13,4 @@ from .log import Log, LogValue
 from .reports import Report, ReportColumn, ReportSection, AggregationType
 from .formula import (Formula, FormulaToken, TokenValueFrom as
                       TokenValueFromEnum, TokenType as TokenTypeEnum,
-                      DateAggregator, MathOperation as MathOperationEnum)
+                      DateAggregator, MathSymbol as MathSymbolEnum)

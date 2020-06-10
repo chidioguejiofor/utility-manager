@@ -1,7 +1,10 @@
 from settings import db
 from .base import OrgBaseModel, UserActionBase, BaseModel
 import enum
+import numpy as np
 from api.utils.constants import ID_FIELD_LENGTH
+from api.utils.error_messages import serialization_error
+from sqlalchemy.orm import joinedload
 
 
 class TokenType(enum.Enum):
@@ -11,7 +14,7 @@ class TokenType(enum.Enum):
     FORMULA = 'FORMULA'
 
 
-class MathOperation(enum.Enum):
+class MathSymbol(enum.Enum):
     MULTIPLY = '*'
     SUBTRACT = '-'
     DIVISION = '/'
@@ -30,19 +33,6 @@ class DateAggregator(BaseModel):
     sql_func_call = db.Column(db.TEXT, nullable=False)
 
 
-class Formula(UserActionBase, OrgBaseModel):
-    name = db.Column(db.String(30), nullable=False)
-    has_formula = db.Column(db.Boolean, nullable=False)
-
-    # Relationships
-    tokens = db.relationship("FormulaToken",
-                             back_populates='parent',
-                             lazy=True)
-    referenced_tokens = db.relationship("FormulaToken",
-                                        back_populates='referenced_formula',
-                                        lazy=True)
-
-
 class FormulaToken(UserActionBase, OrgBaseModel):
     # Token values
     position = db.Column(db.Integer, nullable=False)
@@ -51,9 +41,15 @@ class FormulaToken(UserActionBase, OrgBaseModel):
 
     value_from = db.Column(db.Enum(TokenValueFrom,
                                    name='token_value_from_enum'),
-                           nullable=False,
-                           default=TokenValueFrom.CURRENT)
+                           nullable=True)
 
+    # Values including symbols and foreign keys
+    symbol = db.Column(
+        db.Enum(MathSymbol, name='math_symbol_enum'),
+        nullable=True,
+    )
+
+    constant = db.Column(db.Float(precision=2), nullable=True)
     # Foreign Keys
     parent_id = db.Column(
         db.String(ID_FIELD_LENGTH),  # The formula that owns this token
@@ -78,3 +74,30 @@ class FormulaToken(UserActionBase, OrgBaseModel):
                                          back_populates='referenced_tokens',
                                          foreign_keys=[formula_id],
                                          lazy=True)
+
+
+class Formula(UserActionBase, OrgBaseModel):
+    name = db.Column(db.String(30), nullable=False)
+    has_formula = db.Column(db.Boolean, nullable=False)
+    unit_id = db.Column(db.String(ID_FIELD_LENGTH),
+                        db.ForeignKey('Unit.id',
+                                      ondelete='CASCADE',
+                                      name='unit_id_fk'),
+                        nullable=True)
+
+    # Relationships
+    tokens = db.relationship("FormulaToken",
+                             back_populates='parent',
+                             foreign_keys=[FormulaToken.parent_id],
+                             lazy=True)
+    referenced_tokens = db.relationship("FormulaToken",
+                                        back_populates='referenced_formula',
+                                        foreign_keys=[FormulaToken.formula_id],
+                                        lazy=True)
+    unit = db.relationship("Unit", lazy=True)
+
+    # Unique Constraints
+    __unique_constraints__ = ((('name', 'organisation_id'),
+                               'org_formula_unique_constraint'), )
+    __unique_violation_msg__ = serialization_error['exists_in_org'].format(
+        'Formula')

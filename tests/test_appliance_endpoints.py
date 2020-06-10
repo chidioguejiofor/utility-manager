@@ -151,9 +151,8 @@ class TestCreateApplianceEndpoints:
         org, category_model, parameter = run_test_precondition(client)
         json_data = ApplianceGenerator.generate_api_input_data(
             [parameter.id], category_model.id)
-        json_data['parameters'].append('id1')
-        json_data['parameters'].append('id1')
-        json_data['parameters'].append('id2')
+        invalid_param_ids = ['id1', 'id1', 'id2']
+        json_data['parameters'].extend(invalid_param_ids)
         response = client.post(URL.format(org.id),
                                data=json.dumps(json_data),
                                content_type="application/json")
@@ -161,8 +160,11 @@ class TestCreateApplianceEndpoints:
         assert response_body['status'] == 'error'
         assert response_body['message'] == serialization_error[
             'not_found_fields']
-        assert response_body['errors']['parameter_ids'] == serialization_error[
-            'not_found'].format('Some parameters')
+        assert response_body['errors']['parameter_ids'][
+            'message'] == serialization_error['not_found'].format(
+                'Some parameters')
+        assert set(response_body['errors']['parameter_ids']
+                   ['invalidValues']) == set(invalid_param_ids)
         assert response.status_code == 404
 
     def test_should_return_404_when_appliance_category_is_not_found(
@@ -177,8 +179,12 @@ class TestCreateApplianceEndpoints:
 
         assert response_body['message'] == serialization_error[
             'not_found_fields']
-        assert response_body['errors']['categoryId'] == serialization_error[
-            'not_found'].format('Appliance Category')
+        assert response_body['errors']['categoryId'][
+            'message'] == serialization_error['not_found'].format(
+                'Appliance Category')
+        assert response_body['errors']['categoryId']['invalidValues'] == [
+            'invalid-category-id'
+        ]
         assert response.status_code == 404
 
         assert response_body['status'] == 'error'
